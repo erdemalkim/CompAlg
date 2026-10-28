@@ -518,7 +518,7 @@ print(V)
           <tr><td style="padding: 0.15em 1em 0.15em 0"><code>carp_mod(a, b, w)</code></td><td>alt yol: $a\,b \operatorname{rem} m$</td></tr>
         </table>
         <p><span class="term">Yazacaklarınız</span> (kodda $\omega$ yerine <code>w</code>). <code>degerlendir(f, w)</code> $n$ uzunluklu değer listesini, <code>interpole(v, w)</code> $n$ uzunluklu katsayı listesini döndürür; $n$ = <code>len(f)</code> = <code>len(v)</code>.</p>
-        <p><span class="term">Testler.</span> Hücre çalışınca 16 doğruluk testi koşar; her testte değerlendirme, interpolasyon ve <code>carp_mod</code> ile hesaplanan $a\,b \operatorname{rem} m$ ayrı ayrı denetlenir. <code>HIZ_K = 14</code> yapınca $n = 2^{10}, 2^{12}, 2^{14}$ hız testleri de koşar.</p>
+        <p><span class="term">Testler.</span> Hücre çalışınca 16 doğruluk testi koşar; her testte değerlendirme, interpolasyon ve <code>carp_mod</code> ile hesaplanan $a\,b \operatorname{rem} m$ ayrı ayrı denetlenir. <code>HIZ_K = 14</code> yapınca $n = 2^{10}, 2^{12}, 2^{14}$ hız testleri de koşar. Eğer testleriniz 20 saniyeden uzun sürerse kodlarınızı kontrol etmenizi öneririm.</p>
       </div>
     </div>
 
@@ -699,7 +699,7 @@ for k in range(10, min(HIZ_K, 14) + 1, 2):
         <p><code>odev.h</code>: yazacağınız iki fonksiyonun bildirimi.</p>
         $$\texttt{degerlendir(f, n, w, out)}, \quad \texttt{interpole(v, n, w, out)}$$
         <p>Kodda $\omega$ yerine <code>w</code> yazılır.</p>
-        <p><span class="term">Derleme.</span> Kendi bilgisayarınızda <code>make calistir</code> doğruluk, <code>make hiz</code> ek olarak $n = 2^{20}$'ye kadar hız testlerini çalıştırır. Burada hız testleri için Girdi'ye <code>20</code> yazın.</p>
+        <p><span class="term">Derleme.</span> Kendi bilgisayarınızda <code>make calistir</code> doğruluk, <code>make hiz</code> ek olarak $n = 2^{20}$'ye kadar hız testlerini çalıştırır. Burada hız testleri için Girdi'ye <code>20</code> yazın. Eğer çalışma süresi 20 saniyeden uzun sürerse kodlarınızı kontrol ederek tekrar deneyin.</p>
         <p>Sekmelerdeki tüm dosyaları okuyabilirsiniz; yalnızca <code>ogrenci.c</code> düzenlenir.</p>
       </div>
     </div>
@@ -896,6 +896,7 @@ static void hiz_testi(int k, el w) {
 int main(void) {
     int K = 0;
     if (scanf("%d", &K) != 1) K = 0;
+    setvbuf(stdout, NULL, _IOLBF, 0);
 
     dogruluk_testleri();
     if (K >= 10) {
