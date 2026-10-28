@@ -1,0 +1,1984 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<!-- SageMathCell kendi stil ve MathJax betiklerini belgedeki İLK <script> etiketinin önüne ekler.
+     Bu boş betik o yer tutucudur; silinirse ilk Sage hücresinin kodu bozulur. -->
+<script></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilgisayar Cebiri — Ev Ödevi: Değerlendirme ve İnterpolasyon</title>
+
+<!--
+  ŞABLON KULLANIMI
+  ----------------
+  Her içerik slaytı iki sütundan oluşur. Sütun türleri:
+
+    <div class="col col-def">   <div class="col-label">Tanım</div>    <div class="def"> ... $LaTeX$ ... </div> </div>
+    <div class="col col-sage">  <div class="col-label">SageMath</div> <div class="sage-cell"><script type="text/x-sage"> ... </script></div> </div>
+    <div class="col col-c">     <div class="col-label">C</div>        <div class="c-runner" data-stdin="240 46"><script type="text/x-c"> ... </script></div> </div>
+
+  C sütununda birden çok dosya için her dosyaya data-file verin; her biri bir sekme olur:
+    <script type="text/x-c" data-file="main.c"> ... </script>
+    <script type="text/x-c" data-file="xgcd.h"> ... </script>
+    <script type="text/x-c" data-file="xgcd.c"> ... </script>
+  Derlemede tüm .c dosyaları birlikte derlenir; #include "xgcd.h" sekmedeki dosyayı kullanır.
+
+  İki sütunu <div class="cols"> ... </div> içine koyun.
+  Matematik: satır içi $...$, ayrı satır $$...$$ (KaTeX).
+  C kodu Compiler Explorer'da, Sage kodu SageMathCell'de çalışır; internet bağlantısı gerekir.
+  Editördeyken slayt değiştirmek için önce Esc.
+-->
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #fafbfc;
+    --ink: #1b2333;
+    --muted: #5b6577;
+    --rule: #d9dee6;
+    --panel: #ffffff;
+    --def: #1b2333;          /* Tanım sütunu */
+    --sage: #1f6fb2;         /* SageMath sütunu */
+    --c: #6a4c93;            /* C sütunu */
+    --term-bg: #1d2431;
+    --term-ink: #dfe5ee;
+    --tk-keyword: #6a4c93;
+    --tk-type: #1f6fb2;
+    --tk-string: #2b7a4b;
+    --tk-number: #a8521e;
+    --tk-comment: #7d8798;
+    --tk-meta: #9c3b6b;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141922;
+      --ink: #e7ebf2;
+      --muted: #9aa5b6;
+      --rule: #2c3442;
+      --panel: #0f131a;
+      --def: #e7ebf2;
+      --sage: #6aa8e0;
+      --c: #b39ddb;
+      --term-bg: #0a0d12;
+      --term-ink: #dfe5ee;
+      --tk-keyword: #c3a6ee;
+      --tk-type: #82b4ea;
+      --tk-string: #9fd3a9;
+      --tk-number: #efa271;
+      --tk-comment: #6b7586;
+      --tk-meta: #ee86b8;
+      color-scheme: dark;
+    }
+  }
+
+  html, body { height: 100%; margin: 0; background: var(--bg); }
+  html body.reveal-viewport { background: var(--bg); }
+
+  .reveal {
+    font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    font-size: clamp(13px, min(1.45vw, 2.6vh), 24px);
+  }
+  .reveal .slides { text-align: left; }
+  .reveal .slides > section { box-sizing: border-box; height: 100%; padding: 4vh 3.5vw 7vh; overflow-y: auto; }
+  .reveal .slide-inner { height: 100%; display: flex; flex-direction: column; }
+
+  .reveal h1, .reveal h2 {
+    font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .reveal h2 { font-size: 1.75em; }
+  .reveal .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1em;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.35em;
+    margin-bottom: 0.5em;
+  }
+  .reveal .head .ctx { color: var(--muted); font-size: 0.8em; white-space: nowrap; }
+  .reveal .lead { color: var(--muted); margin: 0 0 0.8em; max-width: 80ch; line-height: 1.45; }
+  .reveal code { font-family: "Source Code Pro", Consolas, monospace; font-size: 0.92em; }
+  .reveal kbd {
+    font-family: "Source Code Pro", Consolas, monospace;
+    font-size: 0.8em;
+    border: 1px solid var(--rule);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 0 0.35em;
+  }
+
+  /* ---------- Kapak ---------- */
+  .cover .slide-inner { justify-content: center; }
+  .cover .course { font-size: 1em; color: var(--muted); margin-bottom: 0.6em; }
+  .cover h1 { font-size: 3.4em; max-width: 22ch; margin-bottom: 0.3em; }
+  .cover .bezout {
+    font-size: 2.1em;
+    color: var(--sage);
+    margin: 0.2em 0 0.8em;
+  }
+  .cover .bezout .katex { color: inherit; }
+  .cover .bezout .katex-display { margin: 0; }
+  .cover .bezout .katex-display > .katex { text-align: left; }
+  .cover p { max-width: 60ch; line-height: 1.5; margin: 0 0 0.6em; }
+  .cover .keys { color: var(--muted); font-size: 0.85em; }
+
+  /* ---------- İki sütun ---------- */
+  .cols {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 20em;          /* çok kısa ekranlarda sıkışmak yerine slayt kayar */
+    gap: 1.6em;
+  }
+  .col { display: flex; flex-direction: column; min-height: 0; gap: 0.4em; }
+  .col-label {
+    font-weight: 600;
+    font-size: 0.85em;
+    padding-bottom: 0.25em;
+    border-bottom: 3px solid currentColor;
+  }
+  .col-def  .col-label { color: var(--def); }
+  .col-sage .col-label { color: var(--sage); }
+  .col-c    .col-label { color: var(--c); }
+
+  /* Tanım metni: ders kitabı dili */
+  .def {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 1em;
+    line-height: 1.55;
+  }
+  .def.dense { font-size: 0.88em; line-height: 1.5; }   /* uzun tanım sütunları için */
+  .def p { margin: 0 0 0.7em; max-width: 62ch; }
+  .def .term { font-weight: 600; }
+  .def .katex-display { margin: 0.5em 0 0.8em; overflow-x: auto; overflow-y: hidden; padding: 0.1em 0; }
+  .def .invariant {
+    border-left: 3px solid var(--def);
+    padding: 0.2em 0 0.2em 0.8em;
+    margin: 0.4em 0 0.8em;
+  }
+  .def .src { font-size: 0.75em; color: var(--muted); font-style: italic; }
+
+  /* Ortak panel görünümü */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .sub-label { font-size: 0.7em; font-weight: 600; color: var(--muted); margin: 0.2em 0 0.15em; }
+
+  /* ---------- C çalıştırıcı (dikey) ---------- */
+  .c-runner { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.35em; }
+  .c-runner .editor { flex: 3 1 0; min-height: 5em; }
+  /* Dosya sekmeleri */
+  .c-runner .files { flex: 3 1 0; min-height: 6.5em; display: flex; flex-direction: column; }
+  .c-runner .files .editor { flex: 1; min-height: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+  .c-runner .tabs { display: flex; gap: 0.15em; overflow-x: auto; }
+  .c-runner .tab {
+    font: 500 0.7em "Source Code Pro", Consolas, monospace;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    padding: 0.35em 0.9em 0.3em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .c-runner .tab:hover { color: var(--ink); }
+  .c-runner .tab[aria-selected="true"] {
+    color: var(--c);
+    background: var(--panel);
+    border-color: var(--rule);
+    box-shadow: inset 0 2px 0 var(--c);
+    position: relative;
+    top: 1px;
+  }
+  .c-runner .tab:focus-visible { outline: 3px solid var(--c); outline-offset: -3px; }
+  .c-runner .out .loc {
+    color: #9cc3ff;
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+  }
+  .c-runner .bar { display: flex; align-items: center; gap: 0.5em; }
+  .c-runner .stdin-wrap { flex: 1; min-width: 8em; display: flex; align-items: center; gap: 0.4em; }
+  .c-runner .stdin-wrap .sub-label { margin: 0; white-space: nowrap; }
+  .c-runner textarea.stdin {
+    width: 100%;
+    box-sizing: border-box;
+    height: 2.2em;
+    resize: none;
+    font: 0.72em/1.4 "Source Code Pro", Consolas, monospace;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 0.4em 0.6em;
+  }
+  .c-runner .out {
+    flex: 2 1 0;
+    min-height: 5em;
+    margin: 0;
+    overflow: auto;
+    background: var(--term-bg);
+    color: var(--term-ink);
+    border-radius: 6px;
+    padding: 0.6em 0.75em;
+    font: 0.68em/1.45 "Source Code Pro", Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .c-runner .out .dim  { color: #8a95a8; }
+  .c-runner .out .err  { color: #ff9e8a; }
+  .c-runner .out .ok   { color: #85d6a8; }
+  .c-runner .out .warn { color: #f0c870; }
+  .reveal button.btn {
+    font: 600 0.75em "Source Sans 3", system-ui, sans-serif;
+    border-radius: 6px;
+    padding: 0.35em 1em;
+    cursor: pointer;
+    border: 1px solid var(--c);
+  }
+  .reveal button.btn.run { background: var(--c); color: #fff; }
+  .reveal button.btn.reset { background: transparent; color: var(--c); }
+  .reveal button.btn:disabled { opacity: 0.55; cursor: wait; }
+  .reveal button.btn:focus-visible, .c-runner textarea:focus-visible { outline: 3px solid var(--c); outline-offset: 2px; }
+  .c-runner .hint { font-size: 0.65em; color: var(--muted); }
+
+  .reveal .c-runner .CodeMirror {
+    height: 100%;
+    font-family: "Source Code Pro", Consolas, monospace;
+    font-size: 0.7em;
+    line-height: 1.5;
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .reveal .CodeMirror pre.CodeMirror-line,
+  .reveal .CodeMirror pre.CodeMirror-line-like { width: auto; margin: 0; box-shadow: none; font-size: inherit; line-height: inherit; }
+  .reveal .c-runner .CodeMirror-gutters { background: var(--panel); border-right: 1px solid var(--rule); }
+  .reveal .c-runner .CodeMirror-linenumber { color: var(--tk-comment); }
+  .reveal .c-runner .CodeMirror-cursor { border-left-color: var(--ink); }
+  .reveal .c-runner .cm-keyword { color: var(--tk-keyword); }
+  .reveal .c-runner .cm-type, .reveal .c-runner .cm-variable-3 { color: var(--tk-type); }
+  .reveal .c-runner .cm-string { color: var(--tk-string); }
+  .reveal .c-runner .cm-number { color: var(--tk-number); }
+  .reveal .c-runner .cm-comment { color: var(--tk-comment); font-style: italic; }
+  .reveal .c-runner .cm-meta { color: var(--tk-meta); }
+
+  /* ---------- SageMathCell (dikey: kod üstte, çıktı altta) ---------- */
+  .sage-cell, .sage-out {
+    background: #ffffff;
+    color: #1b2333;
+    color-scheme: light;      /* Sage açık temalı; koyu modda da açık panelde kalsın */
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-size: 0.7em;
+    overflow: auto;
+  }
+  .sage-cell { flex: 3; min-height: 6em; padding: 0.4em 0.5em; }
+  .sage-out  { flex: 2; min-height: 4em; padding: 0.5em 0.7em; }
+  .sage-out .sage-bos { color: #7d8798; font-family: "Source Code Pro", Consolas, monospace; }
+  .sage-out img { max-width: 100%; height: auto; }
+  .sage-cell .CodeMirror { height: auto; background: #fff; color: #1b2333; font-family: "Source Code Pro", Consolas, monospace; }
+  /* SageMathCell editörü hücreye ayrılan yüksekliği doldursun (kendi max-height sınırını kaldır) */
+  .sage-cell.sagecell { display: flex; flex-direction: column; }
+  .sage-cell .sagecell_input { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.3em; }
+  .sage-cell .sagecell_editor { flex: 1 1 auto; min-height: 4em; position: relative; }
+  .sage-cell .sagecell_editor .CodeMirror { position: absolute; inset: 0; height: auto !important; border: 1px solid var(--rule); }
+  .sage-cell .CodeMirror-scroll { max-height: none !important; }
+  .sage-cell .sagecell_evalButton { flex: none; align-self: flex-start; margin: 0 !important; }
+  .sage-cell .sagecell_options, .sage-cell .sagecell-templates { flex: none; }
+  .sage-cell pre.yedek { margin: 0; font: 1em/1.5 "Source Code Pro", Consolas, monospace; white-space: pre-wrap; }
+
+  /* ---------- Teslim formu ---------- */
+  .teslim { display: flex; flex-direction: column; gap: 0.7em; font-size: 0.9em; }
+  .teslim label { display: flex; flex-direction: column; gap: 0.2em; font-weight: 600; font-size: 0.85em; }
+  .teslim input[type="text"] {
+    font: 1em "Source Sans 3", system-ui, sans-serif; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 6px; padding: 0.4em 0.6em;
+  }
+  .teslim input[type="file"] { font-size: 0.85em; color: var(--muted); }
+  .teslim .yukleme-mesaj { font-size: 0.8em; color: var(--muted); min-height: 1.2em; }
+  .teslim-durum { margin: 0; padding-left: 1.2em; font-size: 0.85em; line-height: 1.5; }
+  .teslim-durum .uyari { color: #b3261e; }
+  .teslim-durum .tamam { color: #2b7a4b; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .teslim-durum .uyari { color: #ff9e8a; }
+    :root:not([data-theme="light"]) .teslim-durum .tamam { color: #85d6a8; }
+  }
+  .reveal button.btn.pdf { background: var(--sage); border-color: var(--sage); color: #fff; align-self: flex-start; font-size: 0.85em; }
+  .teslim input:focus-visible, .reveal button.btn.pdf:focus-visible { outline: 3px solid var(--sage); outline-offset: 2px; }
+
+  .reveal .controls, .reveal .progress { color: var(--sage); }
+  .reveal .slide-number { background: transparent; color: var(--muted); font-family: "Source Sans 3", system-ui, sans-serif; }
+
+  @media (max-width: 800px) {
+    .reveal .slides > section { overflow-y: auto; }
+    .cols { grid-template-columns: 1fr; grid-template-rows: none; flex: none; min-height: 0; }
+    .c-runner .editor, .sage-cell { min-height: 14em; }
+    .sage-cell { flex: none; height: 24em; }
+    .sage-out { flex: none; }
+    .c-runner .out, .sage-out { min-height: 8em; }
+    .cover h1 { font-size: 2.4em; }
+    .reveal .head { flex-direction: column; gap: 0.2em; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal .slides section { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ================= KAPAK ================= -->
+<section class="cover">
+  <div class="course">Bilgisayar Cebiri, Ev Ödevi</div>
+  <h1>$\omega$'nın kuvvetlerinde değerlendirme ve interpolasyon</h1>
+  <div class="bezout">$$m = \prod_{i=0}^{n-1}\bigl(x - \omega^{\,i}\bigr), \qquad F[x]/\langle m\rangle \;\xrightarrow{\ \chi\ }\; \prod_{i=0}^{n-1} F[x]/\langle x - \omega^{\,i}\rangle$$</div>
+  <p>$F[x]/\langle m\rangle$'de yapılacak bir hesabı, $m$'nin $x - \omega^{\,i}$ çarpanlarına karşılık gelen $n$ bileşende yapıp sonucu geri toplayacağız. Bileşenlere iniş <em>değerlendirme</em>, geri dönüş <em>interpolasyondur</em>. Bu iki işlemi hem SageMath'te hem C'de siz yazacaksınız; gereken diğer her şey hazır olarak veriliyor.</p>
+  <p>Son teslim: <strong>09 / 11 / 2026, 08:30</strong></p>
+  <p class="keys"><kbd>Shift</kbd>+<kbd>Enter</kbd> Sage hücresini, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> C kodunu çalıştırır. Editördeyken slayt değiştirmek için önce <kbd>Esc</kbd>.</p>
+</section>
+
+<!-- ================= PROBLEM ================= -->
+<section>
+  <div class="head">
+    <h2>$F[x]/\langle m\rangle$ ve bileşenleri</h2>
+    <span class="ctx">Ev ödevi · §5.1, §5.4</span>
+  </div>
+  <div class="cols">
+
+    <div class="col col-def">
+      <div class="col-label">Tanım</div>
+      <div class="def dense">
+        <p>$p$ bir asal, $F = \mathbb{F}_p$, $\omega \in F$ ve $n \ge 1$ olsun. Testlerde iki asal kullanılır: küçük $p = 97$ ve büyük $p = 998244353$. Noktalar, modüller ve çarpımları:</p>
+        $$\begin{aligned} u_i &= \omega^{\,i}, \qquad m_i = x - u_i \qquad (0 \le i &lt; n),\\ m &= m_0\, m_1 \cdots m_{n-1}. \end{aligned}$$
+        <p>$\deg m = n$ olduğundan $F[x]/\langle m\rangle$'nin her elemanını derecesi $n$'den küçük temsilcisiyle, yani $f \operatorname{rem} m$ ile, katsayı listesi $(f_0, \ldots, f_{n-1})$ olarak tutarız. (Kitaptaki gibi $f \operatorname{rem} m$ kalanlı bölmedeki kalan polinomu, $f \bmod m$ ise $F[x]/\langle m\rangle$'deki sınıfı gösterir.)</p>
+        <p>$f \operatorname{rem} (x - u) = f(u)$ olduğundan her bileşen $F[x]/\langle m_i\rangle$, $F$'nin bir kopyasıdır ve $f$'nin oradaki görüntüsü $f(\omega^{\,i})$ değeridir. $m_i \mid m$ olduğundan</p>
+        $$\begin{aligned} \chi(f \bmod m) &= \bigl(f \operatorname{rem} m_0, \ldots, f \operatorname{rem} m_{n-1}\bigr)\\ &= \bigl(f(\omega^{\,0}), f(\omega^{\,1}), \ldots, f(\omega^{\,n-1})\bigr) \end{aligned}$$
+        <p>iyi tanımlıdır (Bölüm 5'teki $\chi$).</p>
+        <p class="src">von zur Gathen ve Gerhard, Modern Computer Algebra, §5.1, §5.2, §5.4.</p>
+      </div>
+    </div>
+
+    <div class="col col-def">
+      <div class="col-label">Bileşenlerde hesap</div>
+      <div class="def">
+        <p>Örnek: $a, b \in F[x]/\langle m\rangle$ için $c = a\, b \operatorname{rem} m$.</p>
+        $$\begin{array}{ccc} a,\ b & \xrightarrow{\ \ a\,b\ \operatorname{rem}\ m\ \ } & c\\[4pt] {\scriptstyle \chi}\ \big\downarrow & & \big\uparrow\ {\scriptstyle \text{interpolasyon}}\\[4pt] \bigl(a(\omega^{\,i})\bigr)_i,\ \bigl(b(\omega^{\,i})\bigr)_i & \xrightarrow{\ \text{her } i \text{ için } F\text{'de çarp}\ } & \bigl(a(\omega^{\,i})\, b(\omega^{\,i})\bigr)_i \end{array}$$
+        <p><span class="term">Üst yol:</span> klasik çarpma ve $m$'ye göre kalanlı bölme (§2.3, §2.4).</p>
+        <p><span class="term">Alt yol:</span> $\chi$ ile bileşenlere in, her bileşende $F$'de bir çarpma yap, interpolasyonla $F[x]/\langle m\rangle$'ye geri dön. $m(\omega^{\,i}) = 0$ olduğundan $c(\omega^{\,i}) = a(\omega^{\,i})\, b(\omega^{\,i})$ olur.</p>
+        <div class="invariant">
+          <p>Bu ödevde alt yolun iki dikey okunu yazacaksınız: aşağı ok <em>değerlendirme</em>, yukarı ok <em>interpolasyon</em>.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= VANDERMONDE ================= -->
+<section>
+  <div class="head">
+    <h2>Matris gösterimi: Vandermonde</h2>
+    <span class="ctx">Ev ödevi · §5.2</span>
+  </div>
+  <div class="cols">
+
+    <div class="col col-def">
+      <div class="col-label">Tanım</div>
+      <div class="def dense">
+        <p>$f = f_0 + f_1 x + \cdots + f_{n-1}x^{n-1}$ için $f(\omega^{\,i}) = \sum_{j} f_j\, (\omega^{\,i})^{j}$. Yani $\chi$, katsayı vektörü $\mathbf f = (f_0, \ldots, f_{n-1})^{\mathsf T}$'yi <span class="term">Vandermonde matrisi</span> ile çarpar:</p>
+        $$V = \operatorname{VDM}(u_0, \ldots, u_{n-1}) = \bigl(u_i^{\,j}\bigr) = \bigl(\omega^{\,ij}\bigr)_{0 \le i, j &lt; n}$$
+        $$V = \begin{pmatrix} 1 & 1 & 1 & \cdots & 1\\ 1 & \omega & \omega^{2} & \cdots & \omega^{\,n-1}\\ 1 & \omega^{2} & \omega^{4} & \cdots & \omega^{\,2(n-1)}\\ \vdots & \vdots & \vdots & \ddots & \vdots\\ 1 & \omega^{\,n-1} & \omega^{\,2(n-1)} & \cdots & \omega^{\,(n-1)^2} \end{pmatrix}$$
+        <p><span class="term">Değerlendirme:</span> $\mathbf f$ verilince değer vektörü $\mathbf v = V\mathbf f$, yani $v_i = f(\omega^{\,i})$. <span class="term">İnterpolasyon:</span> $\mathbf v$ verilince $V\mathbf f = \mathbf v$ sistemini sağlayan $\mathbf f$.</p>
+        <p>Doğrudan yapılırsa $V\mathbf f$ için $n^2$ çarpma, $V\mathbf f = \mathbf v$ sistemini Gauss eliminasyonu ile çözmek için $n^3$ mertebesinde işlem gerekir.</p>
+        <div class="invariant">
+          <p><span class="term">Deneyin.</span> Sağdaki hücre $p = 97$ için alt yolu $V$ ile uygular. <code>denemeler</code> listesine en az 5 farklı $\omega$ ve farklı $n$ değerleriyle $(n, \omega)$ çiftleri ekleyip çalıştırın. Bu hücrenin son çıktısı teslim PDF'ine eklenir.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col col-sage">
+      <div class="col-label">SageMath (denemeler, p = 97)</div>
+<div class="sage-cell" data-kaydet="odev-interpolasyon-vdm" data-deneme><script type="text/x-sage">
+F = GF(97)
+R.<x> = F[]
+
+# (n, w) çiftleri: farklı w ve n değerleri ekleyin (1 <= w <= 96)
+denemeler = [(4, 2), (4, 3)]
+
+for n, w in denemeler:
+    w = F(w)
+    V = matrix(F, n, n, lambda i, j: w^(i*j))      # V = (w^(ij))
+    m = prod(x - w^i for i in range(n))
+    a = R([F.random_element() for _ in range(n)])
+    b = R([F.random_element() for _ in range(n)])
+    c = (a * b) % m                                # üst yol
+    y = vector(F, [a(w^i) * b(w^i) for i in range(n)])  # bileşenlerde
+    try:
+        f = V.solve_right(y)                       # yukarı ok: V f = y
+        ayni = list(f) == c.padded_list(n)
+        sonuc = "V f = y çözümü c ile " + ("aynı" if ayni else "FARKLI")
+    except ValueError:
+        sonuc = "V f = y çözülemedi"
+    print("n = %2d, w = %2d: %s" % (n, int(w), sonuc))
+
+print("\nSon denemenin V matrisi:")
+print(V)
+</script></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= GÖREVLER ================= -->
+<section>
+  <div class="head">
+    <h2>Görevler</h2>
+    <span class="ctx">Ev ödevi</span>
+  </div>
+  <div class="cols">
+
+    <div class="col col-def">
+      <div class="col-label">Yazacağınız iki fonksiyon</div>
+      <div class="def">
+        <p><span class="term">Görev 1 — Değerlendirme</span> (aşağı ok, <code>degerlendir</code>).<br>
+        Girdi: $n$, $\omega$ ve $\deg f &lt; n$ olan $f$'nin katsayıları $(f_0, \ldots, f_{n-1})$.<br>
+        Çıktı: $\chi(f \bmod m) = \bigl(f \operatorname{rem} (x - \omega^{\,i})\bigr)_{0 \le i &lt; n} = \bigl(f(\omega^{\,0}), \ldots, f(\omega^{\,n-1})\bigr)$, yani $V\mathbf f$.</p>
+        <p><span class="term">Görev 2 — İnterpolasyon</span> (yukarı ok, <code>interpole</code>).<br>
+        Girdi: $n$, $\omega$ ve $\mathbf v = (v_0, \ldots, v_{n-1}) \in F^n$.<br>
+        Çıktı: $\deg f &lt; n$ olan ve her $0 \le i &lt; n$ için</p>
+        $$f \equiv v_i \pmod{x - \omega^{\,i}}, \quad \text{yani } V\mathbf f = \mathbf v,$$
+        <p>sağlayan $f \in F[x]$'in katsayıları. Bu $f$, $F[x]/\langle m\rangle$'nin bir elemanının temsilcisidir.</p>
+        <div class="invariant">
+          <p><span class="term">Hazır:</span> <code>carp_mod(a, b)</code> alt yolu sizin iki fonksiyonunuzla uygular: $\chi(a)$ ve $\chi(b)$ bileşen bileşen çarpılır, sonuç interpole edilir. Testler bunu doğrudan hesaplanan $a\, b \operatorname{rem} m$ ile karşılaştırır.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col col-def">
+      <div class="col-label">Kurallar</div>
+      <div class="def dense">
+        <p><span class="term">Yalnızca iki fonksiyon.</span> Sage'de <code>interpolasyon.sage</code> içindeki "SİZİN KODUNUZ" bölümünü, C'de <code>ogrenci.c</code> dosyasını düzenleyin. Diğer dosyalar ve testler değiştirilmemelidir.</p>
+        <p><span class="term">Hazır yardımcılar.</span> Cisimde toplama, çıkarma, çarpma ve üs alma; tamsayılarda genişletilmiş Öklid algoritması; Horner, polinom toplama, çarpma ve kalanlı bölme hazırdır. Bunları kullanabilir, kendi yardımcı fonksiyonlarınızı da ekleyebilirsiniz. Ters eleman için hazır bir fonksiyon <em>verilmez</em>; gerekiyorsa genişletilmiş Öklid'den kendiniz elde edin. Sage'in hazır polinom halkaları, interpolasyon fonksiyonları ve hazır ters işlemleri (<code>PolynomialRing</code>, <code>lagrange_polynomial</code>, <code>1/a</code>, <code>a^(-1)</code>, <code>inverse_mod</code> vb.) kullanılamaz.</p>
+        <p><span class="term">Hız.</span> Hız testlerinde ($n = 2^{10}, 2^{12}, \ldots$) C sürümü <code>-O2</code> ile $n = 2^{20}$ için her işlemi 1 saniyenin altında, Sage sürümü $n = 2^{14}$ için her işlemi 10 saniyenin altında bitirmelidir.</p>
+        <p><span class="term">Teslim.</span> Yalnızca son slayttaki "PDF olarak kaydet" ile oluşturulan PDF teslim edilir; kodlarınız PDF'in içindedir. Ödevin yanında sınavda vereceğiniz cevaplar da %80 ödev + %20 sınav soruları olarak değerlendirilecektir. Kendi bilgisayarınızda çalışmak için dosyalar: <a href="./ogrenci.zip">ogrenci.zip</a>.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= SAGE ================= -->
+<section>
+  <div class="head">
+    <h2>SageMath şablonu</h2>
+    <span class="ctx">interpolasyon.sage</span>
+  </div>
+  <div class="cols">
+
+    <div class="col col-def">
+      <div class="col-label">Hazır yardımcılar</div>
+      <div class="def dense">
+        <p>Polinomlar $F$ elemanlarından oluşan listelerdir: <code>f[i]</code> $= x^i$'nin katsayısı.</p>
+        <table style="border-collapse: collapse; font-size: 0.9em; margin-bottom: 0.8em">
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>cisim_sec(q)</code></td><td><code>F</code> $= \mathbb{F}_q$, <code>p</code> $= q$ (testler çağırır)</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>gen_oklid(a, b)</code></td><td>$(g, s, t)$: $s\,a + t\,b = g = \gcd(a, b)$ ($\mathbb Z$'de)</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>us(a, e)</code></td><td>$a^e$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>horner(f, a)</code></td><td>$f(a)$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>topla</code>, <code>cikar</code></td><td>$a \pm b$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>olcekle(a, k)</code></td><td>$k \cdot a$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>carp(a, b)</code></td><td>$a \cdot b$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>bol(a, b)</code></td><td>$(q, r)$, $a = q b + r$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>m_polinomu(w, n)</code></td><td>$m = \prod_{i&lt;n} (x - \omega^{\,i})$</td></tr>
+          <tr><td style="padding: 0.15em 1em 0.15em 0"><code>carp_mod(a, b, w)</code></td><td>alt yol: $a\,b \operatorname{rem} m$</td></tr>
+        </table>
+        <p><span class="term">Yazacaklarınız</span> (kodda $\omega$ yerine <code>w</code>). <code>degerlendir(f, w)</code> $n$ uzunluklu değer listesini, <code>interpole(v, w)</code> $n$ uzunluklu katsayı listesini döndürür; $n$ = <code>len(f)</code> = <code>len(v)</code>.</p>
+        <p><span class="term">Testler.</span> Hücre çalışınca 16 doğruluk testi koşar; her testte değerlendirme, interpolasyon ve <code>carp_mod</code> ile hesaplanan $a\,b \operatorname{rem} m$ ayrı ayrı denetlenir. <code>HIZ_K = 14</code> yapınca $n = 2^{10}, 2^{12}, 2^{14}$ hız testleri de koşar.</p>
+      </div>
+    </div>
+
+    <div class="col col-sage">
+      <div class="col-label">SageMath</div>
+<div class="sage-cell" data-kaydet="odev-interpolasyon-sage"><script type="text/x-sage">
+# Ad Soyad :
+# Numara   :
+#
+# Yalnızca "SİZİN KODUNUZ" bölümünü düzenleyin.
+# Polinomlar F_p elemanlarından oluşan listelerdir: f[i] = x^i'nin katsayısı.
+
+# ===================== HAZIR YARDIMCILAR (değiştirmeyin) =====================
+def cisim_sec(q):
+    """Kullanılan cismi seçer: F = GF(q), p = q (testler çağırır)."""
+    global p, F
+    p, F = q, GF(q)
+
+cisim_sec(97)
+
+def gen_oklid(a, b):
+    """Genişletilmiş Öklid (tamsayılarda): (g, s, t), s*a + t*b = g = gcd(a, b)."""
+    r0, r1, s0, s1, t0, t1 = ZZ(a), ZZ(b), 1, 0, 0, 1
+    while r1 != 0:
+        q = r0 // r1
+        r0, r1 = r1, r0 - q*r1
+        s0, s1 = s1, s0 - q*s1
+        t0, t1 = t1, t0 - q*t1
+    return r0, s0, t0
+
+def us(a, e):
+    """a^e, ardışık kare alma ile."""
+    a, s = F(a), F(1)
+    while e > 0:
+        if e % 2 == 1:
+            s *= a
+        a *= a
+        e //= 2
+    return s
+
+def horner(f, a):
+    """f(a)"""
+    s = F(0)
+    for c in reversed(f):
+        s = s*a + c
+    return s
+
+def topla(a, b):
+    n = max(len(a), len(b))
+    a = a + [F(0)]*(n - len(a)); b = b + [F(0)]*(n - len(b))
+    return [x + y for x, y in zip(a, b)]
+
+def cikar(a, b):
+    return topla(a, [-y for y in b])
+
+def olcekle(a, k):
+    return [k*x for x in a]
+
+def carp(a, b):
+    """Klasik çarpma."""
+    if not a or not b:
+        return []
+    c = [F(0)] * (len(a) + len(b) - 1)
+    for i, x in enumerate(a):
+        for j, y in enumerate(b):
+            c[i + j] += x*y
+    return c
+
+def bol(a, b):
+    """Kalanlı bölme: (q, r), a = q*b + r, len(r) = len(b) - 1. b[-1] != 0."""
+    k, nb = list(a), len(b)
+    g, s, t = gen_oklid(b[-1], p)              # s*lc(b) + t*p = 1
+    u = F(s)                                   # u = lc(b)^(-1)
+    q = [F(0)] * max(len(a) - nb + 1, 0)
+    for i in reversed(range(len(q))):
+        c = k[i + nb - 1] * u
+        q[i] = c
+        for j in range(nb):
+            k[i + j] -= c * b[j]
+    r = (k + [F(0)]*nb)[:nb - 1]
+    return q, r
+
+def m_polinomu(w, n):
+    """m = (x - w^0)(x - w^1)...(x - w^(n-1)), n+1 katsayı."""
+    m = [F(1)]
+    for i in range(n):
+        m = carp(m, [-us(w, i), F(1)])
+    return m
+
+def carp_mod(a, b, w):
+    """a*b rem m, bileşenlerde: değerlendir, bileşen bileşen çarp,
+    interpole et (sizin iki fonksiyonunuzu kullanır)."""
+    va, vb = degerlendir(a, w), degerlendir(b, w)
+    return interpole([x*y for x, y in zip(va, vb)], w)
+
+# ============================ SİZİN KODUNUZ ==================================
+# Sage'in hazır polinom halkalarını, interpolasyon fonksiyonlarını ve hazır ters
+# işlemlerini (1/a, a^(-1), inverse_mod ...) kullanmayın; yalnızca yukarıdaki
+# yardımcıları ve F'de toplama, çıkarma, çarpmayı kullanın.
+
+def degerlendir(f, w):
+    """f: n katsayı. [f(w^0), f(w^1), ..., f(w^(n-1))] döndürür."""
+    n = len(f)
+    # TODO
+    return [F(0)] * n
+
+def interpole(v, w):
+    """v: n değer. Derecesi n'den küçük ve f(w^i) = v[i] olan f'nin
+    katsayılarını [f0, f1, ..., f(n-1)] döndürür."""
+    n = len(v)
+    # TODO
+    return [F(0)] * n
+
+# ============================ TESTLER (değiştirmeyin) ========================
+HIZ_K = 0     # 10 ya da daha büyük: n = 2^10, 2^12, ..., 2^HIZ_K hız testleri
+
+P_BUYUK = 998244353
+testler = [(97, 1, 5), (97, 8, 64), (97, 6, 6), (97, 12, 6), (97, 10, 64),
+           (97, 16, 8), (97, 7, 35), (97, 24, 4), (97, 20, 2),
+           (P_BUYUK, 8, 372528824), (P_BUYUK, 10, 929031873),
+           (P_BUYUK, 14, 467509451), (P_BUYUK, 6, 779057549),
+           (P_BUYUK, 32, 922799308), (P_BUYUK, 16, 3), (P_BUYUK, 6, 911660635)]
+hiz_w = {10: 258648936, 12: 63912897, 14: 666702199}     # p = P_BUYUK
+
+def sonuc(d):
+    return "TAMAM" if d else "HATALI"
+
+set_random_seed(2026)
+gecen = 0
+print("Test          p   n          w  değerlendirme  interpolasyon  çarpım mod m")
+for t, (q, n, w) in enumerate(testler, 1):
+    cisim_sec(q)
+    w = F(w)
+    f = [F.random_element() for _ in range(n)]
+    g = [F.random_element() for _ in range(n)]
+    beklenen = [horner(f, w^i) for i in range(n)]
+    d1 = degerlendir(f, w) == beklenen
+    d2 = interpole(beklenen, w) == f
+    _, fg_mod_m = bol(carp(f, g), m_polinomu(w, n))     # doğrudan a*b rem m
+    d3 = carp_mod(f, g, w) == fg_mod_m
+    gecen += d1 + d2 + d3
+    print("%4d  %9d  %2d  %9d  %-13s  %-13s  %s"
+          % (t, q, n, int(w), sonuc(d1), sonuc(d2), sonuc(d3)))
+print("Toplam: %d / %d" % (gecen, 3*len(testler)))
+
+if HIZ_K >= 10:
+    print("\nHız testleri (p = %d)" % P_BUYUK)
+    cisim_sec(P_BUYUK)
+for k in range(10, min(HIZ_K, 14) + 1, 2):
+    n, w = 2^k, F(hiz_w[k])
+    f = [F.random_element() for _ in range(n)]
+    t0 = walltime(); v = degerlendir(f, w); t1 = walltime()
+    g = interpole(v, w); t2 = walltime()
+    d1 = all(v[i] == horner(f, w^i) for i in (ZZ.random_element(n) for _ in range(5)))
+    print("n = 2^%-2d  değerlendirme %7.3f s %-7s interpolasyon %7.3f s %s"
+          % (k, t1 - t0, sonuc(d1), t2 - t1, sonuc(g == f)))
+</script></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= C ================= -->
+<section>
+  <div class="head">
+    <h2>C şablonu</h2>
+    <span class="ctx">ogrenci.c</span>
+  </div>
+  <div class="cols">
+
+    <div class="col col-def">
+      <div class="col-label">Hazır yardımcılar</div>
+      <div class="def dense">
+        <p>Elemanlar <code>el</code> ($= $ <code>uint32_t</code>, $0 \le a &lt; p$), polinomlar <code>el</code> dizileridir: <code>f[i]</code> $= x^i$'nin katsayısı. Geçerli asal <code>P</code> değişkenindedir; testler onu <code>cisim_sec</code> ile ayarlar.</p>
+        <p><code>cisim.h</code>: <code>el_topla</code>, <code>el_cikar</code>, <code>el_carp</code>, <code>el_us</code> ve tamsayılarda genişletilmiş Öklid <code>gen_oklid(a, b, &amp;s, &amp;t)</code> ($s\,a + t\,b = \gcd(a, b)$). Ters eleman için hazır fonksiyon verilmez.</p>
+        <p><code>poly.h</code>: <code>poly_yeni</code> (sıfırlı dizi ayırır), <code>poly_horner</code>, <code>poly_topla</code>, <code>poly_cikar</code>, <code>poly_olcekle</code>, <code>poly_carp</code>, <code>poly_bol</code>, <code>poly_m</code> ($m$'yi hesaplar), <code>poly_yazdir</code>.</p>
+        <p><code>main.c</code>: testler ve hazır <code>carp_mod</code> (alt yol: $a\,b \operatorname{rem} m$).</p>
+        <p><code>odev.h</code>: yazacağınız iki fonksiyonun bildirimi.</p>
+        $$\texttt{degerlendir(f, n, w, out)}, \quad \texttt{interpole(v, n, w, out)}$$
+        <p>Kodda $\omega$ yerine <code>w</code> yazılır.</p>
+        <p><span class="term">Derleme.</span> Kendi bilgisayarınızda <code>make calistir</code> doğruluk, <code>make hiz</code> ek olarak $n = 2^{20}$'ye kadar hız testlerini çalıştırır. Burada hız testleri için Girdi'ye <code>20</code> yazın.</p>
+        <p>Sekmelerdeki tüm dosyaları okuyabilirsiniz; yalnızca <code>ogrenci.c</code> düzenlenir.</p>
+      </div>
+    </div>
+
+    <div class="col col-c">
+      <div class="col-label">C</div>
+      <div class="c-runner" data-stdin="0" data-kaydet="odev-interpolasyon-c" data-flags="-std=c11 -O2 -Wall -Wextra">
+<script type="text/x-c" data-file="ogrenci.c">
+/*
+ * Ad Soyad  :
+ * Numara    :
+ *
+ * Yalnızca bu dosyayı düzenleyin. Teslim, ödev sayfasındaki PDF ile yapılır.
+ * cisim.h ve poly.h içindeki hazır fonksiyonları kullanabilirsiniz.
+ */
+#include <stdlib.h>
+#include <string.h>
+#include "cisim.h"
+#include "poly.h"
+#include "odev.h"
+
+void degerlendir(const el *f, size_t n, el w, el *out) {
+    /* TODO */
+    (void)f; (void)w;
+    memset(out, 0, n * sizeof(el));
+}
+
+void interpole(const el *v, size_t n, el w, el *out) {
+    /* TODO */
+    (void)v; (void)w;
+    memset(out, 0, n * sizeof(el));
+}
+</script>
+<script type="text/x-c" data-file="odev.h">
+#ifndef ODEV_H
+#define ODEV_H
+
+#include <stddef.h>
+#include "cisim.h"
+
+/*
+ * Değerlendirme: f, n katsayılı bir polinom (f[i] = x^i'nin katsayısı).
+ * out[i] = f(w^i),  i = 0, 1, ..., n-1.
+ */
+void degerlendir(const el *f, size_t n, el w, el *out);
+
+/*
+ * İnterpolasyon: v, n değer.
+ * Derecesi n'den küçük ve her i = 0, ..., n-1 için f(w^i) = v[i]
+ * sağlayan f'nin katsayılarını out'a yazar (out[i] = x^i'nin katsayısı).
+ */
+void interpole(const el *v, size_t n, el w, el *out);
+
+#endif /* ODEV_H */
+</script>
+<script type="text/x-c" data-file="main.c">
+/*
+ * Test programı. Değiştirmeyin.
+ * Girdi: tek bir tamsayı K. K >= 10 ise n = 2^10, 2^12, ..., 2^K
+ * boyutlarında hız testleri de çalışır (K <= 20).
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include "cisim.h"
+#include "poly.h"
+#include "odev.h"
+
+static uint64_t durum;
+static el rastgele(void) {                 /* xorshift64 */
+    durum ^= durum << 13;
+    durum ^= durum >> 7;
+    durum ^= durum << 17;
+    return (el)(durum % P);
+}
+
+#define P_BUYUK 998244353u
+
+struct test { el p; size_t n; el w; };
+
+static const struct test testler[] = {
+    {      97,  1,          5 },
+    {      97,  8,         64 },
+    {      97,  6,          6 },
+    {      97, 12,          6 },
+    {      97, 10,         64 },
+    {      97, 16,          8 },
+    {      97,  7,         35 },
+    {      97, 24,          4 },
+    {      97, 20,          2 },
+    { P_BUYUK,  8, 372528824 },
+    { P_BUYUK, 10, 929031873 },
+    { P_BUYUK, 14, 467509451 },
+    { P_BUYUK,  6, 779057549 },
+    { P_BUYUK, 32, 922799308 },
+    { P_BUYUK, 16,         3 },
+    { P_BUYUK,  6, 911660635 },
+};
+
+static const el hiz_w[] = {               /* p = P_BUYUK; n = 2^10, ..., 2^20 */
+    258648936, 63912897, 666702199, 629671588, 996173970, 565042129
+};
+
+static int ayni(const el *a, const el *b, size_t n) {
+    for (size_t i = 0; i < n; i++)
+        if (a[i] != b[i]) return 0;
+    return 1;
+}
+
+/*
+ * c = a*b rem m, bileşenlerde: değerlendir, bileşen bileşen çarp,
+ * interpole et (sizin iki fonksiyonunuzu kullanır). a, b, c: n uzunluklu.
+ */
+static void carp_mod(const el *a, const el *b, size_t n, el w, el *c) {
+    el *va = poly_yeni(n), *vb = poly_yeni(n);
+    degerlendir(a, n, w, va);
+    degerlendir(b, n, w, vb);
+    for (size_t i = 0; i < n; i++) va[i] = el_carp(va[i], vb[i]);
+    interpole(va, n, w, c);
+    free(va); free(vb);
+}
+
+static const char *sonuc(int d) { return d ? "TAMAM" : "HATALI"; }
+
+static int dogruluk_testleri(void) {
+    size_t say = sizeof testler / sizeof testler[0];
+    int gecen = 0;
+    printf("Test          p   n          w  değerlendirme  interpolasyon  çarpım mod m\n");
+    for (size_t t = 0; t < say; t++) {
+        size_t n = testler[t].n;
+        el w = testler[t].w;
+        cisim_sec(testler[t].p);
+        el *f = poly_yeni(n), *g = poly_yeni(n), *v = poly_yeni(n);
+        el *beklenen = poly_yeni(n), *h = poly_yeni(n), *c = poly_yeni(n);
+        el *fg = poly_yeni(2 * n - 1), *m = poly_yeni(n + 1);
+        el *fg_mod_m = poly_yeni(n);
+
+        durum = 0x9E3779B97F4A7C15ull * (t + 1);
+        for (size_t i = 0; i < n; i++) f[i] = rastgele();
+        for (size_t i = 0; i < n; i++) g[i] = rastgele();
+        el u = 1;
+        for (size_t i = 0; i < n; i++) {
+            beklenen[i] = poly_horner(f, n, u);
+            u = el_carp(u, w);
+        }
+
+        degerlendir(f, n, w, v);
+        int d1 = ayni(v, beklenen, n);
+        interpole(beklenen, n, w, h);
+        int d2 = ayni(h, f, n);
+        poly_carp(f, n, g, n, fg);                  /* doğrudan a*b rem m */
+        poly_m(w, n, m);
+        poly_bol(fg, 2 * n - 1, m, n + 1, NULL, fg_mod_m);
+        carp_mod(f, g, n, w, c);
+        int d3 = ayni(c, fg_mod_m, n);
+
+        printf("%4zu  %9u  %2zu  %9u  %-14s %-14s %s\n", t + 1,
+               (unsigned)testler[t].p, n, (unsigned)w,
+               sonuc(d1), sonuc(d2), sonuc(d3));
+        gecen += d1 + d2 + d3;
+        free(f); free(g); free(v); free(beklenen); free(h); free(c);
+        free(fg); free(m); free(fg_mod_m);
+    }
+    printf("Toplam: %d / %zu\n", gecen, 3 * say);
+    return gecen;
+}
+
+static void hiz_testi(int k, el w) {
+    size_t n = (size_t)1 << k;
+    el *f = poly_yeni(n), *v = poly_yeni(n), *g = poly_yeni(n);
+    durum = 12345 + (uint64_t)k;
+    for (size_t i = 0; i < n; i++) f[i] = rastgele();
+
+    clock_t t0 = clock();
+    degerlendir(f, n, w, v);
+    clock_t t1 = clock();
+    interpole(v, n, w, g);
+    clock_t t2 = clock();
+
+    /* Birkaç noktayı Horner ile denetle */
+    int d1 = 1;
+    for (int j = 0; j < 5; j++) {
+        size_t i = rastgele() % n;
+        if (v[i] != poly_horner(f, n, el_us(w, i))) d1 = 0;
+    }
+    int d2 = ayni(f, g, n);
+    printf("n = 2^%-2d  değerlendirme %8.3f s %-7s interpolasyon"
+           " %8.3f s %s\n", k,
+           (double)(t1 - t0) / CLOCKS_PER_SEC, sonuc(d1),
+           (double)(t2 - t1) / CLOCKS_PER_SEC, sonuc(d2));
+    free(f); free(v); free(g);
+}
+
+int main(void) {
+    int K = 0;
+    if (scanf("%d", &K) != 1) K = 0;
+
+    dogruluk_testleri();
+    if (K >= 10) {
+        printf("\nHız testleri (p = %u)\n", P_BUYUK);
+        cisim_sec(P_BUYUK);
+        for (int k = 10; k <= K && k <= 20; k += 2)
+            hiz_testi(k, hiz_w[(k - 10) / 2]);
+    }
+    return 0;
+}
+</script>
+<script type="text/x-c" data-file="cisim.h">
+#ifndef CISIM_H
+#define CISIM_H
+
+#include <stdint.h>
+
+/*
+ * F_p sonlu cismi; p < 2^32 bir asal.
+ * Elemanlar 0 <= a < p aralığında uint32_t olarak tutulur.
+ * Testler p'yi cisim_sec ile ayarlar; kodunuzda P'yi okuyabilirsiniz.
+ * Bu dosyadaki fonksiyonlar hazırdır; değiştirmeyin.
+ */
+typedef uint32_t el;
+
+extern el P;                      /* geçerli asal p */
+
+void cisim_sec(el p);             /* P = p            */
+
+el el_topla(el a, el b);          /* a + b            */
+el el_cikar(el a, el b);          /* a - b            */
+el el_carp(el a, el b);           /* a * b            */
+el el_us(el a, uint64_t e);       /* a^e              */
+
+/*
+ * Genişletilmiş Öklid algoritması (tamsayılarda).
+ * g = gcd(a, b) döndürür ve s*a + t*b = g olacak şekilde *s, *t yazar.
+ */
+int64_t gen_oklid(int64_t a, int64_t b, int64_t *s, int64_t *t);
+
+#endif /* CISIM_H */
+</script>
+<script type="text/x-c" data-file="cisim.c">
+#include "cisim.h"
+
+el P = 97;
+
+void cisim_sec(el p) {
+    P = p;
+}
+
+el el_topla(el a, el b) {
+    uint64_t c = (uint64_t)a + b;      /* p > 2^31 olabilir: 64 bitte topla */
+    return (el)(c >= P ? c - P : c);
+}
+
+el el_cikar(el a, el b) {
+    return a >= b ? a - b : a + (P - b);
+}
+
+el el_carp(el a, el b) {
+    return (el)((uint64_t)a * b % P);
+}
+
+/* Ardışık kare alma */
+el el_us(el a, uint64_t e) {
+    el s = 1 % P;
+    while (e > 0) {
+        if (e & 1) s = el_carp(s, a);
+        a = el_carp(a, a);
+        e >>= 1;
+    }
+    return s;
+}
+
+/* Genişletilmiş Öklid: her adımda s_i*a + t_i*b = r_i korunur */
+int64_t gen_oklid(int64_t a, int64_t b, int64_t *s, int64_t *t) {
+    int64_t r0 = a, r1 = b, s0 = 1, s1 = 0, t0 = 0, t1 = 1;
+    while (r1 != 0) {
+        int64_t q = r0 / r1, tmp;
+        tmp = r0 - q * r1; r0 = r1; r1 = tmp;
+        tmp = s0 - q * s1; s0 = s1; s1 = tmp;
+        tmp = t0 - q * t1; t0 = t1; t1 = tmp;
+    }
+    *s = s0;
+    *t = t0;
+    return r0;
+}
+</script>
+<script type="text/x-c" data-file="poly.h">
+#ifndef POLY_H
+#define POLY_H
+
+#include <stddef.h>
+#include "cisim.h"
+
+/*
+ * F_p[x] polinomları: n uzunluklu el dizisi, f[i] = x^i'nin katsayısı.
+ * Bu dosyadaki fonksiyonlar hazırdır; değiştirmeyin.
+ */
+
+/* Sıfırlarla dolu n uzunluklu dizi ayırır (free ile serbest bırakın). */
+el *poly_yeni(size_t n);
+
+/* f(a), Horner kuralı ile. */
+el poly_horner(const el *f, size_t n, el a);
+
+/* c = a + b  ve  c = a - b  (üçü de n uzunluklu; c, a ya da b olabilir) */
+void poly_topla(const el *a, const el *b, size_t n, el *c);
+void poly_cikar(const el *a, const el *b, size_t n, el *c);
+
+/* c = k * a  (n uzunluklu; c, a olabilir) */
+void poly_olcekle(const el *a, size_t n, el k, el *c);
+
+/* c = a * b, klasik çarpma. c'nin uzunluğu na + nb - 1 olmalı;
+ * c, a ve b'den farklı bir dizi olmalı. Uzunluğu döndürür. */
+size_t poly_carp(const el *a, size_t na, const el *b, size_t nb, el *c);
+
+/* Kalanlı bölme: a = q*b + r, deg r < deg b.
+ * b[nb-1] != 0 olmalı. q'nun uzunluğu na - nb + 1 (na >= nb ise),
+ * r'nin uzunluğu nb - 1. q ya da r NULL verilirse yazılmaz. */
+void poly_bol(const el *a, size_t na, const el *b, size_t nb,
+              el *q, el *r);
+
+/* m = (x - w^0)(x - w^1)...(x - w^(n-1)); m'nin uzunluğu n + 1. */
+void poly_m(el w, size_t n, el *m);
+
+/* "ad = [f0, f1, ...]" biçiminde yazdırır. */
+void poly_yazdir(const char *ad, const el *f, size_t n);
+
+#endif /* POLY_H */
+</script>
+<script type="text/x-c" data-file="poly.c">
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "poly.h"
+
+el *poly_yeni(size_t n) {
+    el *f = calloc(n ? n : 1, sizeof(el));
+    if (f == NULL) {
+        fprintf(stderr, "poly_yeni: bellek yetersiz\n");
+        exit(1);
+    }
+    return f;
+}
+
+el poly_horner(const el *f, size_t n, el a) {
+    el s = 0;
+    for (size_t i = n; i-- > 0; )
+        s = el_topla(el_carp(s, a), f[i]);
+    return s;
+}
+
+void poly_topla(const el *a, const el *b, size_t n, el *c) {
+    for (size_t i = 0; i < n; i++) c[i] = el_topla(a[i], b[i]);
+}
+
+void poly_cikar(const el *a, const el *b, size_t n, el *c) {
+    for (size_t i = 0; i < n; i++) c[i] = el_cikar(a[i], b[i]);
+}
+
+void poly_olcekle(const el *a, size_t n, el k, el *c) {
+    for (size_t i = 0; i < n; i++) c[i] = el_carp(a[i], k);
+}
+
+size_t poly_carp(const el *a, size_t na, const el *b, size_t nb, el *c) {
+    if (na == 0 || nb == 0) return 0;
+    size_t nc = na + nb - 1;
+    memset(c, 0, nc * sizeof(el));
+    for (size_t i = 0; i < na; i++)
+        for (size_t j = 0; j < nb; j++)
+            c[i + j] = el_topla(c[i + j], el_carp(a[i], b[j]));
+    return nc;
+}
+
+void poly_bol(const el *a, size_t na, const el *b, size_t nb,
+              el *q, el *r) {
+    el *k = poly_yeni(na);                /* ara kalan */
+    memcpy(k, a, na * sizeof(el));
+    /* u = lc(b)^(-1) mod P: gen_oklid ile s*lc + t*P = 1 => u = s mod P */
+    int64_t s, t;
+    gen_oklid(b[nb - 1], P, &s, &t);
+    s %= (int64_t)P;
+    el u = (el)(s < 0 ? s + P : s);
+    if (na >= nb) {
+        for (size_t i = na - nb + 1; i-- > 0; ) {
+            el c = el_carp(k[i + nb - 1], u);
+            if (q) q[i] = c;
+            for (size_t j = 0; j < nb; j++)
+                k[i + j] = el_cikar(k[i + j], el_carp(c, b[j]));
+        }
+    }
+    if (r) {
+        size_t nr = nb - 1;
+        for (size_t i = 0; i < nr; i++) r[i] = i < na ? k[i] : 0;
+    }
+    free(k);
+}
+
+void poly_m(el w, size_t n, el *m) {
+    el *tmp = poly_yeni(n + 1);
+    size_t nm = 1;
+    el u = 1;
+    m[0] = 1;
+    for (size_t i = 0; i < n; i++) {           /* m <- m * (x - w^i) */
+        el carpan[2] = { el_cikar(0, u), 1 };
+        nm = poly_carp(m, nm, carpan, 2, tmp);
+        memcpy(m, tmp, nm * sizeof(el));
+        u = el_carp(u, w);
+    }
+    free(tmp);
+}
+
+void poly_yazdir(const char *ad, const el *f, size_t n) {
+    printf("%s = [", ad);
+    for (size_t i = 0; i < n; i++)
+        printf(i ? ", %u" : "%u", (unsigned)f[i]);
+    printf("]\n");
+}
+</script>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= TESLİM ================= -->
+<section>
+  <div class="head">
+    <h2>Teslim</h2>
+    <span class="ctx">Ev ödevi</span>
+  </div>
+  <div class="cols">
+
+    <div class="col col-def">
+      <div class="col-label">Adımlar</div>
+      <div class="def">
+        <p>Bu sayfadaki editörlerde yaptığınız değişiklikler tarayıcınızda otomatik saklanır. Kendi bilgisayarınızda çalıştıysanız dosyalarınızı yandan yükleyin: sayfada çalıştırılan kodla karşılaştırılır; farklıysa <em>Editöre aktar</em> ile editöre alıp yeniden çalıştırın.</p>
+        <p><span class="term">1.</span> Vandermonde slaytındaki deneme hücresine en az 5 farklı $\omega$ ekleyip <em>Hesapla</em>'ya basın.</p>
+        <p><span class="term">2.</span> Sage şablonunda <code>HIZ_K = 14</code> yapıp <em>Hesapla</em>'ya basın.</p>
+        <p><span class="term">3.</span> C şablonunda Girdi'ye <code>20</code> yazıp <em>Çalıştır</em>'a basın.</p>
+        <p><span class="term">4.</span> Ad soyad ve numaranızı yazıp <em>PDF olarak kaydet</em>'e basın; PDF dosyası indirilir.</p>
+        <p>PDF'te denemelerin, Sage şablonunun ve C programının çıktıları ile tüm Sage, C ve başlık (<code>.h</code>) dosyalarının son hâli bulunur; bu sayfada çalıştırdığınız <code>ogrenci.c</code> ve Sage kodları PDF'e ek olarak da gömülür. Kodu son çalıştırmadan sonra değiştirdiyseniz yeniden çalıştırın: PDF'teki çıktı güncel olmalıdır.</p>
+        <p><span class="term">Teslim edilecek:</span> yalnızca bu PDF. Ayrıca dosya göndermeyin.</p>
+      </div>
+    </div>
+
+    <div class="col col-def">
+      <div class="col-label">PDF</div>
+      <div class="teslim def" data-ogrenci-dosya="ogrenci.c" data-sage-bas="SİZİN KODUNUZ"
+           data-sage-son="TESTLER (değiştirmeyin)" data-c-girdi="20" data-sage-hiz="HIZ_K = 14" data-deneme-en-az="5">
+        <label>Ad Soyad <input type="text" name="ad" autocomplete="name"></label>
+        <label>Numara <input type="text" name="numara" inputmode="numeric"></label>
+        <label><span>Yerel dosyalarımı karşılaştır (isteğe bağlı: <code>ogrenci.c</code>, <code>interpolasyon.sage</code>)</span>
+          <input type="file" multiple accept=".c,.h,.sage,.txt"></label>
+        <div class="yukleme-mesaj" aria-live="polite"></div>
+        <div class="sub-label">Durum</div>
+        <ul class="teslim-durum" aria-live="polite"><li>Kontrol ediliyor…</li></ul>
+        <button class="btn pdf" type="button">PDF olarak kaydet</button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+
+<script>
+/* ===================== AYARLAR ===================== */
+const DERLEYICI = "cg142";                 // x86-64 gcc 14.2 (C). Liste: https://godbolt.org/api/compilers/c
+const BAYRAKLAR = "-std=c11 -Wall -Wextra"; // slayt bazında: <div class="c-runner" data-flags="...">
+const API = "https://godbolt.org/api/compiler/";
+/* =================================================== */
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function satirlar(x) {
+  if (!x) return "";
+  if (Array.isArray(x)) return x.map(s => s.text ?? "").join("\n");
+  return String(x);
+}
+function ansiTemizle(s) { return s.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ""); }
+
+/* Slayt içeriğini esnek düzen için iç kaba sar */
+document.querySelectorAll(".reveal .slides > section").forEach(sec => {
+  const ic = el("div", "slide-inner");
+  while (sec.firstChild) ic.appendChild(sec.firstChild);
+  sec.appendChild(ic);
+});
+
+/* Matematik (KaTeX) */
+if (window.renderMathInElement) {
+  renderMathInElement(document.querySelector(".reveal .slides"), {
+    delimiters: [
+      { left: "$$", right: "$$", display: true },
+      { left: "$", right: "$", display: false }
+    ],
+    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+    throwOnError: false
+  });
+}
+
+/* Klavye: yazı alanındayken tuşlar slayta gitmesin; Esc odaktan çıkarır */
+const YAZI_ALANI = ".CodeMirror, textarea, input, select, [contenteditable], .ui-slider";
+function klavyeKoru(kap) {
+  kap.addEventListener("keydown", e => {
+    if (!e.target.closest(YAZI_ALANI)) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      document.activeElement.blur();
+      kap.focus({ preventScroll: true });
+    }
+    e.stopPropagation();
+  });
+  kap.addEventListener("touchstart", e => e.stopPropagation(), { passive: true });
+  kap.addEventListener("touchmove", e => e.stopPropagation(), { passive: true });
+  kap.tabIndex = -1;
+}
+
+/* Tarayıcı deposu (gizli pencerede ya da engelliyse sessizce çalışmaz) */
+function depoOku(anahtar) {
+  try { return JSON.parse(localStorage.getItem(anahtar) || "null"); } catch (e) { return null; }
+}
+function depoYaz(anahtar, deger) {
+  try { localStorage.setItem(anahtar, JSON.stringify(deger)); } catch (e) { /* yok say */ }
+}
+function cAnlik(durum) {
+  return JSON.stringify([durum.dosyalar.map(d => d.doc.getValue()),
+                         durum.stdinKutu ? durum.stdinKutu.value : ""]);
+}
+
+/* ===================== C ÇALIŞTIRICI ===================== */
+const editorler = [];
+
+/*
+ * Birden çok dosya: her <script type="text/x-c" data-file="ad.c"> bir sekme olur.
+ * Derlerken tüm .c dosyaları tek bir derleme birimine birleştirilir; #include "x.h"
+ * satırlarının yerine o sekmenin içeriği konur. #line yönergeleri sayesinde derleyici
+ * hataları doğru dosya adı ve satır numarasıyla gösterilir (ör. xgcd.c:12:5).
+ */
+function birlestir(dosyalar) {
+  const ada = new Map(dosyalar.map(d => [d.ad, d]));
+  const eklendi = new Set();   // her başlık bir kez (ayrı derlemedeki gibi)
+  function isle(d) {
+    const cikti = ['#line 1 "' + d.ad + '"'];
+    const sat = d.doc.getValue().split("\n");
+    sat.forEach((satir, i) => {
+      const m = satir.match(/^\s*#\s*include\s*"([^"]+)"/);
+      if (m && ada.has(m[1])) {
+        if (!eklendi.has(m[1])) {
+          eklendi.add(m[1]);
+          cikti.push(...isle(ada.get(m[1])));
+        }
+        cikti.push('#line ' + (i + 2) + ' "' + d.ad + '"');
+      } else {
+        cikti.push(satir);
+      }
+    });
+    return cikti;
+  }
+  const kaynak = [];
+  dosyalar.filter(d => /\.c$/.test(d.ad)).forEach(d => {
+    eklendi.clear();
+    kaynak.push(...isle(d));
+  });
+  return kaynak.join("\n") + "\n";
+}
+
+function cKur(runner) {
+  const betikler = [...runner.querySelectorAll('script[type="text/x-c"]')];
+  const dosyalar = betikler.map((b, i) => {
+    const ilk = b.textContent.replace(/^\n/, "").replace(/\s+$/, "") + "\n";
+    const ad = b.dataset.file || (betikler.length === 1 ? "main.c" : "dosya" + (i + 1) + ".c");
+    b.remove();
+    return { ad, ilk, doc: CodeMirror.Doc(ilk, "text/x-csrc") };
+  });
+
+  // data-kaydet="anahtar": düzenlemeler bu tarayıcıda saklanır
+  const kayitAnahtari = runner.dataset.kaydet ? "mca:" + runner.dataset.kaydet : null;
+  if (kayitAnahtari) {
+    const kayit = depoOku(kayitAnahtari);
+    if (kayit) dosyalar.forEach(d => { if (typeof kayit[d.ad] === "string") d.doc.setValue(kayit[d.ad]); });
+    let zamanlayici = null;
+    dosyalar.forEach(d => d.doc.on("change", () => {
+      clearTimeout(zamanlayici);
+      zamanlayici = setTimeout(() => depoYaz(kayitAnahtari,
+        Object.fromEntries(dosyalar.map(x => [x.ad, x.doc.getValue()]))), 400);
+    }));
+  }
+
+  // Sekmeler + editör
+  const dosyaKutu = el("div", "files");
+  const sekmeler = el("div", "tabs");
+  sekmeler.setAttribute("role", "tablist");
+  const editorKutu = el("div", "editor panel");
+  if (dosyalar.length > 1) dosyaKutu.append(sekmeler);
+  dosyaKutu.append(editorKutu);
+
+  const bar = el("div", "bar");
+  const calistir = el("button", "btn run", "Çalıştır");
+  const sifirla = el("button", "btn reset", "Sıfırla");
+  calistir.title = "Ctrl+Enter";
+  bar.append(calistir, sifirla);
+  runner.append(dosyaKutu, bar);
+
+  let stdinKutu = null;
+  if (runner.hasAttribute("data-stdin")) {
+    const sarici = el("div", "stdin-wrap");
+    stdinKutu = el("textarea", "stdin");
+    stdinKutu.id = "stdin-" + Math.random().toString(36).slice(2, 8);
+    const etiket = el("label", "sub-label", "Girdi");
+    etiket.htmlFor = stdinKutu.id;
+    stdinKutu.value = runner.dataset.stdin.replace(/\\n/g, "\n");
+    stdinKutu.dataset.ilk = stdinKutu.value;
+    stdinKutu.spellcheck = false;
+    sarici.append(etiket, stdinKutu);
+    bar.append(sarici);
+  } else {
+    bar.append(el("span", "hint", "Ctrl+Enter ile çalıştırın"));
+  }
+  runner.append(el("div", "sub-label", "Çıktı"));
+  const out = el("pre", "out");
+  out.append(el("span", "dim", "Programı çalıştırınca çıktı burada görünecek."));
+  runner.append(out);
+
+  const cm = CodeMirror(editorKutu, {
+    value: dosyalar[0].doc,
+    mode: "text/x-csrc",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    extraKeys: {
+      "Ctrl-Enter": () => calistir.click(),
+      "Cmd-Enter": () => calistir.click(),
+      "Tab": c => c.replaceSelection("    "),
+      "Esc": c => c.getInputField().blur()
+    }
+  });
+  editorler.push(cm);
+  klavyeKoru(runner);
+
+  const sekmeDugmeleri = dosyalar.map((d, i) => {
+    const t = el("button", "tab", d.ad);
+    t.setAttribute("role", "tab");
+    t.setAttribute("aria-selected", i === 0 ? "true" : "false");
+    t.addEventListener("click", () => sekmeSec(i));
+    sekmeler.append(t);
+    return t;
+  });
+  function sekmeSec(i) {
+    if (cm.getDoc() !== dosyalar[i].doc) cm.swapDoc(dosyalar[i].doc);
+    sekmeDugmeleri.forEach((t, j) => t.setAttribute("aria-selected", j === i ? "true" : "false"));
+    cm.refresh();
+  }
+  function konumaGit(ad, satir, sutun) {
+    const i = dosyalar.findIndex(d => d.ad === ad);
+    if (i < 0) return;
+    sekmeSec(i);
+    cm.setCursor({ line: satir - 1, ch: Math.max(0, (sutun || 1) - 1) });
+    cm.focus();
+  }
+
+  const durum = { dosyalar, out, stdinKutu: null, sekmeSec, sonCalisan: null };
+  runner.cDurum = durum;
+
+  sifirla.addEventListener("click", () => {
+    dosyalar.forEach(d => d.doc.setValue(d.ilk));
+    if (stdinKutu) stdinKutu.value = stdinKutu.dataset.ilk;
+    sekmeSec(0);
+    out.replaceChildren(el("span", "dim", "Tüm dosyalar ilk haline döndü."));
+  });
+
+  calistir.addEventListener("click", async () => {
+    durum.stdinKutu = stdinKutu;
+    durum.sonCalisan = cAnlik(durum);
+    calistir.disabled = true;
+    calistir.textContent = "Derleniyor…";
+    out.replaceChildren(el("span", "dim", "Derleniyor ve çalıştırılıyor…"));
+    const govde = {
+      source: birlestir(dosyalar),
+      lang: "c",
+      options: {
+        userArguments: runner.dataset.flags || BAYRAKLAR,
+        executeParameters: { args: [], stdin: stdinKutu ? stdinKutu.value : "" },
+        compilerOptions: { executorRequest: true },
+        filters: { execute: true },
+        tools: [],
+        libraries: []
+      },
+      allowStoreCodeDebug: false
+    };
+    try {
+      const yanit = await fetch(API + DERLEYICI + "/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(govde)
+      });
+      if (!yanit.ok) throw new Error("Sunucu " + yanit.status + " döndürdü");
+      goster(await yanit.json(), out, dosyalar.map(d => d.ad), konumaGit);
+    } catch (hata) {
+      out.replaceChildren(
+        el("span", "err", "Derleme sunucusuna ulaşılamadı.\n"),
+        el("span", "dim", "İnternet bağlantısını kontrol edip tekrar deneyin. (" + hata.message + ")")
+      );
+    } finally {
+      calistir.disabled = false;
+      calistir.textContent = "Çalıştır";
+    }
+  });
+}
+
+// Derleyici mesajlarındaki "xgcd.c:12:5" gibi konumları tıklanabilir yap
+function mesajYaz(metin, adlar, konumaGit) {
+  const parcalar = [];
+  metin.split("\n").forEach((satir, i) => {
+    if (i > 0) parcalar.push(document.createTextNode("\n"));
+    const m = satir.match(/^([^\s:]+):(\d+):(?:(\d+):)?/);
+    if (m && adlar.includes(m[1])) {
+      const d = el("button", "loc", m[0]);
+      d.title = m[1] + " dosyasında " + m[2] + ". satıra git";
+      d.addEventListener("click", () => konumaGit(m[1], +m[2], +(m[3] || 1)));
+      parcalar.push(d, document.createTextNode(satir.slice(m[0].length)));
+    } else {
+      parcalar.push(document.createTextNode(satir));
+    }
+  });
+  return parcalar;
+}
+
+function goster(r, out, adlar, konumaGit) {
+  const p = [];
+  const derleme = r.buildResult || r;
+  const derlemeHata = ansiTemizle(satirlar(derleme.stderr)).trim();
+  if ((derleme.code ?? 0) !== 0 || r.didExecute === false) {
+    p.push(el("span", "err", "Derleme başarısız.\n\n"));
+    if (derlemeHata) p.push(...mesajYaz(derlemeHata, adlar, konumaGit));
+    else p.push(el("span", null, "Derleyici bir hata mesajı vermedi."));
+    out.replaceChildren(...p);
+    return;
+  }
+  if (derlemeHata) {
+    p.push(el("span", "warn", "Derleyici uyarıları:\n"), ...mesajYaz(derlemeHata, adlar, konumaGit), document.createTextNode("\n\n"));
+  }
+  const stdout = satirlar(r.stdout);
+  const stderr = ansiTemizle(satirlar(r.stderr));
+  p.push(el("span", null, stdout));
+  if (stderr.trim()) p.push(el("span", "err", (stdout ? "\n" : "") + stderr));
+  const sure = r.execTime != null ? ", " + r.execTime + " ms" : "";
+  p.push(el("span", r.code === 0 ? "ok" : "err", "\n\nProgram " + r.code + " koduyla bitti" + sure));
+  if (r.timedOut) p.push(el("span", "err", "\nZaman aşımı: program çok uzun sürdü."));
+  out.replaceChildren(...p);
+}
+
+document.querySelectorAll(".c-runner").forEach(cKur);
+
+/* ===================== SAGEMATHCELL ===================== */
+const sageHucreleri = [];
+document.querySelectorAll(".sage-cell").forEach((hucre, i) => {
+  hucre.id = "sage-girdi-" + i;
+  const kod = (hucre.querySelector('script[type="text/x-sage"]') || {}).textContent || "";
+  const etiket = el("div", "sub-label", "Çıktı");
+  const cikti = el("div", "sage-out");
+  cikti.id = "sage-cikti-" + i;
+  cikti.append(el("span", "sage-bos", "Hesapla'ya basınca çıktı burada görünecek."));
+  hucre.after(etiket, cikti);
+  const h = { hucre, cikti, kod: kod.trim(), cm: null, sonCalisan: null,
+              anahtar: hucre.dataset.kaydet ? "mca:" + hucre.dataset.kaydet : null };
+  sageHucreleri.push(h);
+  hucre.sageDurum = h;
+  // Hesapla düğmesi ya da Shift+Enter: çalıştırılan kodu not et
+  hucre.addEventListener("click", e => {
+    const d = e.target.closest("button");
+    if (d && d.textContent.trim() === "Hesapla" && h.cm) h.sonCalisan = h.cm.getValue();
+  }, true);
+  hucre.addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.shiftKey && h.cm) h.sonCalisan = h.cm.getValue();
+  }, true);
+  klavyeKoru(hucre.parentElement);
+});
+
+/* Sage hücresinin CodeMirror editörünü bulunca kaydetmeyi bağla */
+function sageEditoruBagla(h) {
+  const bul = () => {
+    const kutu = h.hucre.querySelector(".CodeMirror");
+    if (!kutu || !kutu.CodeMirror) return setTimeout(bul, 300);
+    h.cm = kutu.CodeMirror;
+    if (h.anahtar) {
+      let zamanlayici = null;
+      h.cm.on("change", () => {
+        clearTimeout(zamanlayici);
+        zamanlayici = setTimeout(() => depoYaz(h.anahtar, h.cm.getValue()), 400);
+      });
+    }
+  };
+  bul();
+}
+
+window.addEventListener("load", () => {
+  if (typeof sagecell === "undefined") {
+    sageHucreleri.forEach(h => {
+      h.cikti.textContent = "SageMathCell yüklenemedi. İnternet bağlantısını kontrol edip sayfayı yenileyin.";
+      h.hucre.replaceChildren(el("pre", "yedek", h.kod));
+    });
+    return;
+  }
+  sageHucreleri.forEach(h => {
+    h.cikti.replaceChildren();
+    sagecell.makeSagecell({
+      inputLocation: "#" + h.hucre.id,
+      code: (h.anahtar && depoOku(h.anahtar)) || h.kod,   // kayıtlı düzenleme varsa o
+      outputLocation: "#" + h.cikti.id,
+      evalButtonText: "Hesapla",
+      languages: ["sage"],
+      hide: ["permalink"]
+    });
+    sageEditoruBagla(h);
+  });
+});
+
+/* ===================== TESLİM (PDF) ===================== */
+/*
+ * <div class="teslim" data-ogrenci-dosya="ogrenci.c"
+ *      data-sage-bas="SİZİN KODUNUZ" data-sage-son="TESTLER"
+ *      data-c-girdi="20" data-sage-hiz="HIZ_K = 14"> ... </div>
+ * içinde: input[name=ad], input[name=numara], input[type=file], .teslim-durum, button.pdf
+ */
+function sageCiktisi(h) {
+  return [...h.cikti.querySelectorAll(".sagecell_stdout, .sagecell_stderr, .sagecell_pyerr")]
+    .map(e => e.innerText).join("\n").trim();
+}
+
+function teslimKur(kutu) {
+  // Kaydedilen (öğrencinin düzenlediği) çalıştırıcı ve hücre
+  const runner = document.querySelector(".c-runner[data-kaydet]") || document.querySelector(".c-runner");
+  const hucre = document.querySelector(".sage-cell[data-kaydet]:not([data-deneme])") ||
+                document.querySelector(".sage-cell:not([data-deneme])");
+  const ogrenciDosya = kutu.dataset.ogrenciDosya || "ogrenci.c";
+  const sageDosya = kutu.dataset.sageDosya || "interpolasyon.sage";
+  const denemeDosya = kutu.dataset.denemeDosya || "denemeler.sage";
+  const dHucre = document.querySelector(".sage-cell[data-deneme]");
+  const durumKutu = kutu.querySelector(".teslim-durum");
+  const yuklenen = {};          // dosya adı -> öğrencinin yüklediği metin
+  const esit = (a, b) => a.replace(/\r\n?/g, "\n").replace(/\s+$/, "") === b.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
+
+  // Sayfada en son çalıştırılan kod (PDF'teki çıktıları üreten); hiç çalıştırılmadıysa editördeki
+  function sistemKodu(dosya) {
+    if (dosya === sageDosya || dosya === denemeDosya) {
+      const h = (dosya === sageDosya ? hucre : dHucre).sageDurum;
+      return { metin: h.sonCalisan !== null ? h.sonCalisan : (h.cm ? h.cm.getValue() : h.kod),
+               calisti: h.sonCalisan !== null };
+    }
+    const c = runner.cDurum;
+    const i = c.dosyalar.findIndex(d => d.ad === dosya);
+    if (c.sonCalisan) return { metin: JSON.parse(c.sonCalisan)[0][i], calisti: true };
+    return { metin: c.dosyalar[i].doc.getValue(), calisti: false };
+  }
+
+  // Hazır bölümler (öğrenci bölgesi dışında kalanlar) değişti mi?
+  function sageHazirAyni(simdi, ilk) {
+    const bas = kutu.dataset.sageBas, son = kutu.dataset.sageSon;
+    const parca = t => {
+      const a = t.indexOf(bas), b = t.indexOf(son);
+      if (a < 0 || b < 0) return null;
+      const ayikla = x => x.replace(/^HIZ_K\s*=.*$/m, "HIZ_K").replace(/\s+$/gm, "").trim();
+      return [ayikla(t.slice(0, a)), ayikla(t.slice(b))];
+    };
+    const x = parca(simdi), y = parca(ilk);
+    return x !== null && y !== null && x[0] === y[0] && x[1] === y[1];
+  }
+
+  function rapor() {
+    const c = runner.cDurum, h = hucre.sageDurum;
+    const sorunlar = [];
+    const dosyalar = c.dosyalar.map(d => {
+      const metin = d.doc.getValue();
+      const ayni = metin.replace(/\s+$/, "") === d.ilk.replace(/\s+$/, "");
+      if (d.ad !== ogrenciDosya && !ayni) sorunlar.push(d.ad + " değiştirilmiş (yalnızca " + ogrenciDosya + " düzenlenmeli)");
+      return { ad: d.ad, metin, ayni };
+    });
+    const girdi = runner.querySelector("textarea.stdin");
+    let cDurum;
+    if (!c.sonCalisan) { cDurum = "çalıştırılmadı"; sorunlar.push("C kodu çalıştırılmadı"); }
+    else if (c.sonCalisan !== cAnlik({ dosyalar: c.dosyalar, stdinKutu: girdi })) {
+      cDurum = "son çalıştırmadan sonra kod ya da girdi değişti";
+      sorunlar.push("C çıktısı güncel değil: yeniden Çalıştır'a basın");
+    } else if (!/koduyla bitti|başarısız/.test(c.out.innerText)) {
+      cDurum = "çıktı yok";
+      sorunlar.push("C çıktısı boş ya da hâlâ çalışıyor: bekleyin ya da yeniden Çalıştır'a basın");
+    } else cDurum = "güncel";
+    if (kutu.dataset.cGirdi && girdi && girdi.value.trim() !== kutu.dataset.cGirdi)
+      sorunlar.push("C girdisi " + kutu.dataset.cGirdi + " olmalı (hız testleri)");
+
+    const sageKod = h.cm ? h.cm.getValue() : h.kod;
+    let sDurum;
+    if (!h.sonCalisan) { sDurum = "çalıştırılmadı"; sorunlar.push("Sage kodu çalıştırılmadı"); }
+    else if (h.sonCalisan !== sageKod) {
+      sDurum = "son çalıştırmadan sonra kod değişti";
+      sorunlar.push("Sage çıktısı güncel değil: yeniden Hesapla'ya basın");
+    } else if (!sageCiktisi(h)) {
+      sDurum = "çıktı yok";
+      sorunlar.push("Sage çıktısı boş ya da hâlâ çalışıyor: bekleyin ya da yeniden Hesapla'ya basın");
+    } else sDurum = "güncel";
+    const sageAyni = sageHazirAyni(sageKod, h.kod);
+    if (!sageAyni) sorunlar.push("Sage dosyasının hazır bölümleri değiştirilmiş");
+    if (kutu.dataset.sageHiz && !new RegExp("^" + kutu.dataset.sageHiz.replace(/\s+/g, "\\s*") + "\\b", "m").test(sageKod))
+      sorunlar.push("Sage'de " + kutu.dataset.sageHiz + " yapılmalı (hız testleri)");
+
+    // İsteğe bağlı deneme hücresi (<div class="sage-cell" data-deneme>)
+    let deneme = null;
+    if (dHucre && dHucre.sageDurum) {
+      const dh = dHucre.sageDurum;
+      const kod = dh.cm ? dh.cm.getValue() : dh.kod;
+      const cikti = sageCiktisi(dh);
+      let durum;
+      if (!dh.sonCalisan) { durum = "çalıştırılmadı"; sorunlar.push("Deneme hücresi çalıştırılmadı"); }
+      else if (dh.sonCalisan !== kod) { durum = "son çalıştırmadan sonra kod değişti"; sorunlar.push("Deneme hücresinin çıktısı güncel değil: yeniden Hesapla'ya basın"); }
+      else if (!cikti) { durum = "çıktı yok"; sorunlar.push("Deneme hücresinin çıktısı boş ya da hâlâ çalışıyor"); }
+      else durum = "güncel";
+      const wler = new Set([...cikti.matchAll(/^n\s*=\s*\d+,\s*w\s*=\s*(\d+):/gm)].map(m => m[1]));
+      const enAz = +(kutu.dataset.denemeEnAz || 0);
+      if (wler.size < enAz) sorunlar.push("Denemelerde en az " + enAz + " farklı ω olmalı (şu an " + wler.size + ")");
+      deneme = { kod, cikti, durum, wSayisi: wler.size };
+    }
+
+    for (const [dosya, metin] of Object.entries(yuklenen))
+      if (!esit(metin, sistemKodu(dosya).metin))
+        sorunlar.push("Yüklenen " + dosya + ", bu sayfada çalıştırılan koddan farklı (PDF oluştururken sorulacak)");
+
+    return { dosyalar, cDurum, cCikti: c.out.innerText.trim(), cGirdi: girdi ? girdi.value : "",
+             sageKod, sDurum, sageCikti: sageCiktisi(h), sageAyni, deneme, sorunlar };
+  }
+
+  function durumGoster() {
+    if (!runner.cDurum || !hucre.sageDurum) return;
+    const r = rapor();
+    durumKutu.replaceChildren(...(r.sorunlar.length
+      ? r.sorunlar.map(x => el("li", "uyari", x))
+      : [el("li", "tamam", "Her şey hazır: PDF olarak kaydedebilirsiniz.")]));
+  }
+  setInterval(() => { if (Reveal.getCurrentSlide() && Reveal.getCurrentSlide().contains(kutu)) durumGoster(); }, 1000);
+
+  // Öğrencinin yüklediği dosyalar: editörün üzerine yazılmaz, sistemdeki kodla karşılaştırılır
+  const dosyaGirdisi = kutu.querySelector('input[type="file"]');
+  const yuklemeMesaj = kutu.querySelector(".yukleme-mesaj");
+  let yuklemeAnahtari = "", bilinmeyen = [];
+  dosyaGirdisi.addEventListener("change", async () => {
+    bilinmeyen = [];
+    for (const f of dosyaGirdisi.files) {
+      if (f.name === ogrenciDosya || f.name === sageDosya) yuklenen[f.name] = await f.text();
+      else bilinmeyen.push(f.name);
+    }
+    dosyaGirdisi.value = "";
+    yuklemeAnahtari = "";
+    yuklemeGoster();
+  });
+  function yuklemeGoster() {
+    if (!runner.cDurum || !hucre.sageDurum) return;
+    const durumlar = Object.entries(yuklenen).map(([dosya, metin]) => [dosya, esit(metin, sistemKodu(dosya).metin)]);
+    const anahtar = JSON.stringify([durumlar, bilinmeyen]);
+    if (anahtar === yuklemeAnahtari) return;          // değişmediyse düğmeleri yeniden çizme
+    yuklemeAnahtari = anahtar;
+    const parcalar = durumlar.map(([dosya, ayni]) => {
+      const satir = el("div", null, dosya + ": " + (ayni ? "bu sayfada çalıştırılan kodla aynı."
+                                                     : "bu sayfada çalıştırılan koddan FARKLI. "));
+      if (!ayni) {
+        const b = el("button", "btn reset", "Editöre aktar");
+        b.type = "button";
+        b.title = "Yüklenen dosyayı editöre koyar; ardından kodu yeniden çalıştırın";
+        b.addEventListener("click", () => {
+          if (dosya === sageDosya) hucre.sageDurum.cm.setValue(yuklenen[dosya].replace(/\s+$/, ""));
+          else runner.cDurum.dosyalar.find(d => d.ad === dosya).doc.setValue(yuklenen[dosya]);
+          b.replaceWith(document.createTextNode("Editöre aktarıldı; şimdi kodu yeniden çalıştırın."));
+        });
+        satir.append(b);
+      }
+      return satir;
+    });
+    bilinmeyen.forEach(x => parcalar.push(el("div", null, x + ": yalnızca " + ogrenciDosya + " ve " + sageDosya + " yüklenebilir.")));
+    yuklemeMesaj.replaceChildren(...parcalar);
+  }
+  setInterval(yuklemeGoster, 1000);
+
+  const dugme = kutu.querySelector("button.pdf");
+  dugme.addEventListener("click", async () => {
+    const ad = kutu.querySelector('input[name="ad"]').value.trim();
+    const no = kutu.querySelector('input[name="numara"]').value.trim();
+    if (!ad || !no) { alert("Önce ad soyad ve numaranızı yazın."); return; }
+    const r = rapor();
+    if (r.sorunlar.length && !confirm("Şu sorunlar var:\n\n• " + r.sorunlar.join("\n• ") +
+        "\n\nYine de PDF oluşturulsun mu? (Sorunlar PDF'te de görünür.)")) return;
+
+    // Ekler: önce sistemdeki (çalıştırılan) kod; yüklenen dosya farklıysa öğrenciye sor
+    const farkli = [ogrenciDosya, sageDosya].filter(d => yuklenen[d] !== undefined && !esit(yuklenen[d], sistemKodu(d).metin));
+    const yukleneniKullan = farkli.length > 0 && confirm(
+      "Yüklediğiniz şu dosyalar, raporunuzdaki (bu sayfada çalıştırılan) koddan farklı:\n\n• " +
+      farkli.join("\n• ") + "\n\nBu yüzden PDF'teki sonuçlar yüklediğiniz kodla elde edilmemiş olabilir." +
+      "\n\nTamam: yüklediğiniz dosyalar PDF'e eklenir.\nİptal: bu sayfada çalıştırdığınız kod eklenir.");
+    const ekDosyalari = [ogrenciDosya, sageDosya].concat(r.deneme ? [denemeDosya] : []).map(dosya => {
+      const sis = sistemKodu(dosya);
+      const fark = farkli.includes(dosya);
+      if (fark && yukleneniKullan)
+        return { ad: dosya, metin: yuklenen[dosya], uyari: true, sistemMetin: sis.metin, yuklenenMetin: yuklenen[dosya],
+                 kaynak: "yüklenen dosya (raporun kodundan FARKLI; öğrenci onayladı)" };
+      return { ad: dosya, metin: sis.metin, uyari: fark || !sis.calisti, sistemMetin: sis.metin,
+               yuklenenMetin: yuklenen[dosya],
+               kaynak: (sis.calisti ? "bu sayfada çalıştırılan kod" : "editördeki kod (çalıştırılmadı)") +
+                       (fark ? "; yüklenen dosya farklıydı, eklenmedi" : "") };
+    });
+    const eskiYazi = dugme.textContent;
+    dugme.disabled = true;
+    dugme.textContent = "PDF hazırlanıyor…";
+    try {
+      const { bayt, dosyaAdi } = await pdfUret(r, ad, no, { ogrenciDosya, sageDosya, denemeDosya }, ekDosyalari);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([bayt], { type: "application/pdf" }));
+      a.download = dosyaAdi;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+    } catch (hata) {
+      alert("PDF oluşturulamadı: " + hata.message + "\nİnternet bağlantınızı kontrol edip tekrar deneyin.");
+    } finally {
+      dugme.disabled = false;
+      dugme.textContent = eskiYazi;
+    }
+  });
+}
+
+/* ---------- PDF üretimi (pdf-lib; dosyalar PDF'e ek olarak gömülür) ---------- */
+const PDF_KAYNAK = {
+  pdflib: "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js",
+  fontkit: "https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js",
+  sans: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf",
+  kalin: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf",
+  mono: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSansMono.ttf"
+};
+function betikYukle(src) {
+  return new Promise((tamam, hata) => {
+    if (document.querySelector('script[src="' + src + '"]')) return tamam();
+    const b = document.createElement("script");
+    b.src = src;
+    b.onload = tamam;
+    b.onerror = () => hata(new Error(src + " yüklenemedi"));
+    document.head.appendChild(b);
+  });
+}
+async function baytAl(url) {
+  const y = await fetch(url);
+  if (!y.ok) throw new Error(url + " indirilemedi");
+  return y.arrayBuffer();
+}
+async function sha256(bayt) {
+  if (!(window.crypto && crypto.subtle)) return null;
+  const h = await crypto.subtle.digest("SHA-256", bayt);
+  return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+async function pdfUret(r, ad, no, adlar, ekDosyalari) {
+  await betikYukle(PDF_KAYNAK.pdflib);
+  await betikYukle(PDF_KAYNAK.fontkit);
+  const { PDFDocument, rgb } = PDFLib;
+  const doc = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
+  const [bS, bK, bM] = await Promise.all([PDF_KAYNAK.sans, PDF_KAYNAK.kalin, PDF_KAYNAK.mono].map(baytAl));
+  const sans = await doc.embedFont(bS, { subset: true });
+  const kalin = await doc.embedFont(bK, { subset: true });
+  const mono = await doc.embedFont(bM, { subset: true });
+
+  const W = 595.28, H = 841.89, KX = 40, UST = 46, ALT = 44;
+  const SIYAH = rgb(0.07, 0.07, 0.07), GRI = rgb(0.4, 0.4, 0.4), KIRMIZI = rgb(0.69, 0, 0.13),
+        MAVI = rgb(0.12, 0.37, 0.66), ZEMIN = rgb(0.96, 0.96, 0.96), CIZGI = rgb(0.6, 0.6, 0.6);
+  let sayfa, y;
+  const yeniSayfa = () => { sayfa = doc.addPage([W, H]); y = H - UST; };
+  const yer = h => { if (y - h < ALT) yeniSayfa(); };
+  yeniSayfa();
+
+  // Orantılı yazı: sözcük sözcük sar
+  function sar(metin, font, boyut, gen) {
+    const out = [];
+    for (const ham of String(metin).split("\n")) {
+      let s = "";
+      for (const k of ham.split(" ")) {
+        const aday = s ? s + " " + k : k;
+        if (!s || font.widthOfTextAtSize(aday, boyut) <= gen) s = aday;
+        else { out.push(s); s = k; }
+      }
+      out.push(s);
+    }
+    return out;
+  }
+  function yaz(metin, { font = sans, boyut = 10, renk = SIYAH, x = KX, gen = W - 2 * KX } = {}) {
+    for (const s of sar(metin, font, boyut, gen)) {
+      yer(boyut * 1.4);
+      y -= boyut * 1.4;
+      sayfa.drawText(s, { x, y, size: boyut, font, color: renk });
+    }
+  }
+  function baslik(metin, { yeni = false, boyut = 12, ek = "" } = {}) {
+    if (yeni) yeniSayfa(); else { yer(boyut * 4); y -= boyut * 0.9; }
+    y -= boyut * 1.2;
+    sayfa.drawText(metin, { x: KX, y, size: boyut, font: kalin, color: SIYAH });
+    if (ek) sayfa.drawText(ek, { x: KX + kalin.widthOfTextAtSize(metin + "  ", boyut), y,
+                                  size: boyut - 2, font: sans, color: GRI });
+    y -= 5;
+    sayfa.drawLine({ start: { x: KX, y }, end: { x: W - KX, y }, thickness: 0.6, color: CIZGI });
+    y -= 4;
+  }
+  // İki sütunlu satır (kimlik ve özet tabloları)
+  function ikili(sol, sag, renk = SIYAH) {
+    const sx = KX + 210;
+    const satirlar = sar(sag, sans, 9.5, W - KX - sx);
+    satirlar.forEach((s, i) => {
+      yer(13.5);
+      y -= 13.5;
+      if (i === 0) sayfa.drawText(sol, { x: KX, y, size: 9.5, font: sans, color: SIYAH });
+      sayfa.drawText(s, { x: sx, y, size: 9.5, font: renk === SIYAH ? sans : kalin, color: renk });
+    });
+  }
+  // Eş aralıklı yazı: karakter sayısına göre sar, isteğe bağlı satır numarası ve zemin
+  function kod(metin, { numarali = false, zemin = false } = {}) {
+    const boyut = 7.6, adim = boyut * 1.32, cw = mono.widthOfTextAtSize("M", boyut);
+    const satirlar = String(metin).replace(/\r/g, "").replace(/\t/g, "    ").replace(/\s+$/, "").split("\n");
+    const g = String(satirlar.length).length;
+    const icX = KX + (zemin ? 5 : 0);
+    const enFazla = Math.max(20, Math.floor((W - 2 * KX - (zemin ? 10 : 0)) / cw));
+    satirlar.forEach((s, i) => {
+      const on = numarali ? String(i + 1).padStart(g, " ") + "  " : "";
+      let kalan = on + s, ilk = true;
+      do {
+        const parca = kalan.slice(0, enFazla);
+        kalan = kalan.slice(enFazla);
+        if (kalan) kalan = " ".repeat(on.length) + kalan;
+        yer(adim);
+        y -= adim;
+        if (zemin) sayfa.drawRectangle({ x: KX, y: y - 2.2, width: W - 2 * KX, height: adim, color: ZEMIN });
+        if (numarali && ilk) {
+          sayfa.drawText(parca.slice(0, on.length), { x: icX, y, size: boyut, font: mono, color: GRI });
+          sayfa.drawText(parca.slice(on.length), { x: icX + cw * on.length, y, size: boyut, font: mono, color: SIYAH });
+        } else {
+          sayfa.drawText(parca, { x: icX, y, size: boyut, font: mono, color: SIYAH });
+        }
+        ilk = false;
+      } while (kalan.trim());
+    });
+  }
+
+  const zaman = new Date();
+  const zamanYazi = zaman.toLocaleString("tr-TR");
+  const belgeBasligi = document.title.replace(/^.*?—\s*/, "");
+  const durumYazi = d => d.ayni ? "orijinalle aynı" : d.ad === adlar.ogrenciDosya ? "öğrenci tarafından düzenlendi" : "DEĞİŞTİRİLDİ";
+  const durumRenk = d => d.ayni ? SIYAH : d.ad === adlar.ogrenciDosya ? MAVI : KIRMIZI;
+
+  // ---- Sayfa 1: kimlik, özet, çıktılar
+  y -= 16;
+  sayfa.drawText(belgeBasligi, { x: KX, y, size: 15, font: kalin, color: SIYAH });
+  y -= 6;
+  ikili("Ad Soyad", ad);
+  ikili("Numara", no);
+  ikili("Oluşturulma", zamanYazi);
+  baslik("Özet");
+  r.dosyalar.forEach(d => ikili(d.ad, durumYazi(d), durumRenk(d)));
+  ikili(adlar.sageDosya + " (hazır bölümler)", r.sageAyni ? "orijinalle aynı" : "DEĞİŞTİRİLDİ", r.sageAyni ? SIYAH : KIRMIZI);
+  ikili("C çıktısı", r.cDurum, r.cDurum === "güncel" ? SIYAH : KIRMIZI);
+  ikili("Sage çıktısı", r.sDurum, r.sDurum === "güncel" ? SIYAH : KIRMIZI);
+  if (r.deneme) ikili("Denemeler", r.deneme.durum + ", " + r.deneme.wSayisi + " farklı ω",
+                      r.deneme.durum === "güncel" ? SIYAH : KIRMIZI);
+  if (r.sorunlar.length) { y -= 4; r.sorunlar.forEach(x => yaz("• " + x, { renk: KIRMIZI, boyut: 9.5 })); }
+  baslik("Gömülü ekler");
+  ekDosyalari.forEach(e => ikili(e.ad, e.kaynak, e.uyari ? KIRMIZI : SIYAH));
+  ikili("ozet.json", "kimlik, durumlar, çıktılar ve SHA-256 özetleri");
+
+  baslik("Sage çıktısı");
+  kod(r.sageCikti || "(çıktı yok)", { zemin: true });
+  baslik("C çıktısı", { ek: "(girdi: " + r.cGirdi.trim() + ")" });
+  kod(r.cCikti || "(çıktı yok)", { zemin: true });
+  if (r.deneme) { baslik("Denemeler", { ek: "(Vandermonde slaytı)" }); kod(r.deneme.cikti || "(çıktı yok)", { zemin: true }); }
+
+  // ---- Kodlar: her dosya yeni sayfada
+  baslik(adlar.sageDosya, { yeni: true });
+  kod(r.sageKod, { numarali: true });
+  if (r.deneme) { baslik(adlar.denemeDosya, { yeni: true, ek: "(Vandermonde slaytındaki denemeler)" }); kod(r.deneme.kod, { numarali: true }); }
+  r.dosyalar.forEach(d => { baslik(d.ad, { yeni: true, ek: "(" + durumYazi(d) + ")" }); kod(d.metin, { numarali: true }); });
+
+  // ---- Alt bilgi: sayfa numaraları
+  const sayfalar = doc.getPages();
+  sayfalar.forEach((sf, i) => {
+    const t = no + " · " + ad + " · " + (i + 1) + " / " + sayfalar.length;
+    sf.drawText(t, { x: W - KX - sans.widthOfTextAtSize(t, 8), y: 24, size: 8, font: sans, color: GRI });
+  });
+
+  // ---- Ekler (bayt bayt aynı dosyalar) ve meta veri
+  const enc = new TextEncoder();
+  const ozet = {
+    ad, numara: no, olusturulma: zaman.toISOString(), sayfa: belgeBasligi,
+    durum: { c: r.cDurum, sage: r.sDurum, sageHazirAyni: r.sageAyni,
+             deneme: r.deneme ? r.deneme.durum : null, farkliW: r.deneme ? r.deneme.wSayisi : null },
+    sorunlar: r.sorunlar,
+    ekler: {},
+    dosyalar: {},
+    cGirdi: r.cGirdi.trim(), cCikti: r.cCikti, sageCikti: r.sageCikti,
+    denemeCikti: r.deneme ? r.deneme.cikti : null
+  };
+  for (const e of ekDosyalari)
+    ozet.ekler[e.ad] = { kaynak: e.kaynak, sha256: await sha256(enc.encode(e.metin)),
+                         sistemSha256: await sha256(enc.encode(e.sistemMetin)),
+                         yuklenenSha256: e.yuklenenMetin !== undefined ? await sha256(enc.encode(e.yuklenenMetin)) : null };
+  for (const d of r.dosyalar)
+    ozet.dosyalar[d.ad] = { durum: durumYazi(d), sha256: await sha256(enc.encode(d.metin)) };
+  ozet.dosyalar[adlar.sageDosya] = { durum: r.sageAyni ? "hazır bölümler aynı" : "hazır bölümler DEĞİŞTİRİLDİ",
+                                    sha256: await sha256(enc.encode(r.sageKod)) };
+  const ekler = ekDosyalari.map(e => [e.ad, e.metin, /\.c$/.test(e.ad) ? "text/x-c" : "text/plain"]);
+  ekler.push(["ozet.json", JSON.stringify(ozet, null, 2), "application/json"]);
+  for (const [dosya, metin, tur] of ekler)
+    await doc.attach(enc.encode(metin), dosya, { mimeType: tur, description: dosya + " (" + no + ")",
+                                                 creationDate: zaman, modificationDate: zaman });
+
+  doc.setTitle(no + " " + ad + " - " + belgeBasligi);
+  doc.setAuthor(ad);
+  doc.setSubject(no);
+  doc.setKeywords(["numara:" + no, "c:" + r.cDurum, "sage:" + r.sDurum,
+                   "sorun:" + r.sorunlar.length].concat(r.deneme ? ["w:" + r.deneme.wSayisi] : []));
+  doc.setCreator("Modern Bilgisayar Cebiri ödev sayfası");
+  doc.setCreationDate(zaman);
+  doc.setModificationDate(zaman);
+
+  const guvenli = t => t.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i").replace(/İ/g, "I")
+                         .replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
+  return { bayt: await doc.save(), dosyaAdi: guvenli(no) + "_" + guvenli(ad) + "_odev.pdf" };
+}
+
+/* ===================== REVEAL ===================== */
+function gorunenleriYenile() {
+  const slayt = Reveal.getCurrentSlide();
+  if (!slayt) return;
+  editorler.forEach(cm => { if (slayt.contains(cm.getWrapperElement())) cm.refresh(); });
+}
+
+Reveal.initialize({
+  hash: true,
+  slideNumber: "c/t",
+  transition: "fade",
+  transitionSpeed: "fast",
+  // Ölçeklendirme kapalı: CodeMirror küçültülmüş alanda imleç konumunu şaşırıyor
+  width: "100%",
+  height: "100%",
+  margin: 0,
+  minScale: 1,
+  maxScale: 1,
+  center: false,
+  // reveal.js switches narrow screens (<435px) to its scroll view, which breaks the exercise layout
+  scrollActivationWidth: null
+}).then(() => {
+  gorunenleriYenile();
+  document.querySelectorAll(".teslim").forEach(teslimKur);
+});
+
+Reveal.on("slidechanged", e => {
+  gorunenleriYenile();
+  if (e.currentSlide.querySelector(".sage-cell")) {
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+  }
+});
+Reveal.on("resize", gorunenleriYenile);
+</script>
+
+<!-- C editörleri oluşturulduktan sonra yüklensin diye en sonda -->
+<script src="https://sagecell.sagemath.org/static/embedded_sagecell.js"></script>
+</body>
+</html>
